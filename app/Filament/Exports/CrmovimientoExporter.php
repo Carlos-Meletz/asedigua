@@ -15,29 +15,23 @@ class CrmovimientoExporter extends Exporter
     {
         return [
             ExportColumn::make('agencia_id'),
-            // ExportColumn::make('caja_id'),
             ExportColumn::make('credito_id'),
             ExportColumn::make('fecha'),
             ExportColumn::make('comprobante'),
             ExportColumn::make('tipo'),
-            ExportColumn::make('pago'),
+            ExportColumn::make('ingreso'),
             ExportColumn::make('capital'),
             ExportColumn::make('intes'),
             ExportColumn::make('descint'),
             ExportColumn::make('mora'),
             ExportColumn::make('descmora'),
             ExportColumn::make('otros'),
-            // ExportColumn::make('microseguro'),
-            // ExportColumn::make('saldocap'),
-            // ExportColumn::make('saldoint'),
-            // ExportColumn::make('saldomor'),
             ExportColumn::make('desembolso'),
             ExportColumn::make('descuentos'),
+            ExportColumn::make('egreso'),
             ExportColumn::make('atraso'),
             ExportColumn::make('notas'),
             ExportColumn::make('creado_por'),
-            // ExportColumn::make('actualizado_por'),
-            // ExportColumn::make('anulado'),
         ];
     }
 

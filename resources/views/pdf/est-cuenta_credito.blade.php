@@ -17,8 +17,8 @@ $totalOtros = 0;
                     }}</span></p>
             <p class="font-medium text-gray-700">Número de Crédito: <span class="font-normal">{{
                     $credito->codigo }}</span></p>
-            <p class="font-medium text-gray-700">Monto Aprobado: <span class="font-bold">Q{{
-                    number_format($credito->monto_aprobado, 2) }}</span></p>
+            <p class="font-medium text-gray-700">Monto Solicitado: <span class="font-bold">Q{{
+                    number_format($credito->monto_solicitado, 2) }}</span></p>
             <p class="font-medium text-gray-700">Monto Desembolsado: <span class="font-bold">Q{{
                     number_format($credito->monto_desembolsado, 2) }}</span></p>
             <p class="font-medium text-gray-700">Fecha de Desembolso: <span class="font-normal">{{

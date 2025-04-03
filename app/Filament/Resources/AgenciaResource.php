@@ -71,12 +71,10 @@ class AgenciaResource extends Resource
                         ->label('Latitud')
                         ->numeric()
                         ->required()
-                        ->readOnly()
                         ->reactive(),
                     Forms\Components\TextInput::make('longitude')
                         ->label('Longitud')
                         ->numeric()
-                        ->readOnly()
                         ->required()
                         ->reactive(),
                     Map::make('location')
@@ -132,8 +130,10 @@ class AgenciaResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('departamento')
                     ->searchable()
+                    ->formatStateUsing(fn($state) => Locacion::find($state)->name)
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('municipio')
+                    ->formatStateUsing(fn($state) => Locacion::find($state)->name)
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('direccion')

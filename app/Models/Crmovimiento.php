@@ -4,7 +4,9 @@ namespace App\Models;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
+use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Validation\ValidationException;
 
 class Crmovimiento extends Model
 {
@@ -19,7 +21,21 @@ class Crmovimiento extends Model
             $model->actualizado_por = Auth::id();
             $credito = Credito::find($model->credito_id);
             if (!$model->desembolso) {
-                $pago = $model->pago;
+                $existe = Crmovimiento::where('comprobante', $model->comprobante)
+                    ->where('agencia_id', $model->agencia_id)
+                    ->exists();
+
+                if ($existe) {
+                    Notification::make()
+                        ->title('Comprobante Operado!')
+                        ->warning()
+                        ->body("El comprobante: {$model->comprobante} ya esta registrado.")
+                        ->send();
+                    throw ValidationException::withMessages([
+                        'comprobante' => 'El número de comprobante ya ha sido registrado en esta agencia.',
+                    ]);
+                }
+                $pago = $model->ingreso;
                 $otros = 0;
                 $interes = $model->interes - $model->descint;
                 $mora = $model->mora - $model->descmora;
@@ -68,25 +84,38 @@ class Crmovimiento extends Model
         });
 
         static::deleting(function ($model) {
-            $model->actualizado_por = Auth::id();
-            $model->actualizado_por = Auth::id();
+            $model->actualizado_por = Auth::id(); // ✅ Registrar quién elimina el movimiento
+
             $credito = Credito::find($model->credito_id);
 
             if ($credito) {
                 if ($credito->estado == 'pagado' && $model->saldocap == 0) {
                     $credito->estado = 'desembolsado';
                 }
-                // Restaurar la fecha del último pago al último movimiento antes de este
+
+                // 🔹 Buscar el último movimiento ANTES del eliminado
                 $ultimoMovimiento = Crmovimiento::where('credito_id', $model->credito_id)
-                    ->where('id', '!=', $model->id) // Excluir el movimiento que se está eliminando
+                    ->where('id', '!=', $model->id)
                     ->latest()
                     ->first();
-                // Revertir los valores restados en la creación del movimiento
-                $credito->saldo_capital = $ultimoMovimiento->saldocap;
-                $credito->saldo_interes = $ultimoMovimiento->saldoint;
-                $credito->saldo_mora = $ultimoMovimiento->saldomor;
-                $credito->fecha_ultimopago = $ultimoMovimiento->fecha;
-                $credito->save();
+
+                if ($ultimoMovimiento) {
+                    // ✅ Restaurar valores previos si hay movimientos anteriores
+                    $credito->saldo_capital = $ultimoMovimiento->saldocap;
+                    $credito->saldo_interes = $ultimoMovimiento->saldoint;
+                    $credito->saldo_mora = $ultimoMovimiento->saldomor;
+                    $credito->fecha_ultimopago = $ultimoMovimiento->fecha;
+                } else {
+                    // ✅ Si no hay movimientos previos, cambiar estado a "solicitado"
+                    $credito->estado = 'solicitado';
+                    $credito->monto_desembolsado = 0;
+                    $credito->saldo_capital = 0;
+                    $credito->saldo_interes = 0;
+                    $credito->saldo_mora = 0;
+                    $credito->fecha_ultimopago = null;
+                }
+
+                $credito->save(); // 🔹 Guardar cambios
             }
         });
     }
@@ -98,19 +127,19 @@ class Crmovimiento extends Model
         'fecha',
         'comprobante',
         'tipo',
-        'pago',
+        'ingreso',
         'capital',
         'interes',
         'descint',
         'mora',
         'descmora',
         'otros',
-        'microseguro',
         'saldocap',
         'saldoint',
         'saldomor',
         'desembolso',
         'descuentos',
+        'egreso',
         'atraso',
         'notas',
         'creado_por',

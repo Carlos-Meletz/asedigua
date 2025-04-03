@@ -34,11 +34,11 @@ class SimecPanelProvider extends PanelProvider
             ->id('simec')
             ->path('simec')
             ->login()
-            ->databaseNotifications()
             ->brandName('ASEDIGUA')
             ->brandLogo(fn() => Storage::url('logo/' . Empresa::first()->logo))
             ->brandLogoHeight('4rem')
             ->favicon(fn() => Storage::url('logo/' . Empresa::first()->logo))
+            ->databaseNotifications()
             ->plugins([
                 FilamentEditProfilePlugin::make(),
                 \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make()

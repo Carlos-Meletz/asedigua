@@ -66,7 +66,7 @@ class ClienteResource extends Resource implements HasShieldPermissions
                     Wizard\Step::make('Datos Personales')
                         ->schema([
                             Forms\Components\FileUpload::make('fotografia')
-                                ->required()
+                                // ->required()
                                 ->image()
                                 ->maxSize(1024)
                                 ->imageEditor()
@@ -183,7 +183,7 @@ class ClienteResource extends Resource implements HasShieldPermissions
                                 ->disk('archivo')
                                 ->maxSize(1024)
                                 ->multiple() // Carpeta de almacenamiento
-                                ->required()
+                                // ->required()
                                 ->image()
                                 ->maxFiles(5)
                                 ->imageEditor()
@@ -220,12 +220,10 @@ class ClienteResource extends Resource implements HasShieldPermissions
                                 ->label('Latitud')
                                 ->numeric()
                                 ->required()
-                                ->readOnly()
                                 ->reactive(),
                             Forms\Components\TextInput::make('longitude')
                                 ->label('Longitud')
                                 ->numeric()
-                                ->readOnly()
                                 ->required()
                                 ->reactive(),
                             Map::make('location')

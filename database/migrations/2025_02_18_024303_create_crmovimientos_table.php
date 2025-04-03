@@ -20,14 +20,12 @@ return new class extends Migration
             $table->string('comprobante');
             $table->enum('tipo', ['efectivo', 'banco']);
             //ingresos
-            $table->decimal('pago', 15, 2)->default(0);
             $table->decimal('capital', 15, 2)->default(0);
             $table->decimal('interes', 15, 2)->default(0);
             $table->decimal('descint', 15, 2)->default(0);
             $table->decimal('mora', 15, 2)->default(0);
             $table->decimal('descmora', 15, 2)->default(0);
             $table->decimal('otros', 15, 2)->default(0);
-            $table->decimal('microseguro', 15, 2)->default(0);
             $table->decimal('saldocap', 15, 2)->default(0);
             $table->decimal('saldoint', 15, 2)->default(0);
             $table->decimal('saldomor', 15, 2)->default(0);
@@ -35,6 +33,9 @@ return new class extends Migration
             $table->decimal('desembolso', 15, 2)->default(0);
             $table->decimal('descuentos', 15, 2)->default(0);
             //
+            $table->decimal('ingreso', 15, 2)->default(0);
+            $table->decimal('egreso', 15, 2)->default(0);
+
             $table->integer('atraso')->default(0);
             $table->text('notas')->nullable();
             $table->string('creado_por');

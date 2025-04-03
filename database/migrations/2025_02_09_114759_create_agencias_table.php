@@ -18,8 +18,8 @@ return new class extends Migration
             $table->string('departamento');
             $table->string('municipio');
             $table->string('direccion');
-            $table->decimal('latitude', 10, 8); // Latitud con precisión decimal
-            $table->decimal('longitude', 11, 8);
+            $table->decimal('latitude', 10, 8)->nullable(); // Latitud con precisión decimal
+            $table->decimal('longitude', 11, 8)->nullable();
             $table->string('telefono');
             $table->string('email')->nullable();
             $table->timestamps();

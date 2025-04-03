@@ -16,8 +16,8 @@ return new class extends Migration
             $table->foreignId('agencia_id')->constrained()->onDelete('cascade');  // Relación con la tabla personas
             $table->foreignId('cliente_id')->constrained()->onDelete('cascade');  // Relación con la tabla personas
             $table->string('cargo');
-            $table->decimal('salario', 10, 2);
-            $table->date('fecha_ingreso');
+            $table->decimal('salario', 10, 2)->nullable();
+            $table->date('fecha_ingreso')->nullable();
             $table->date('fecha_salida')->nullable();
             $table->boolean('estado')->default(true);
             $table->timestamps();

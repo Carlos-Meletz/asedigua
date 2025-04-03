@@ -78,8 +78,8 @@ class Credito extends Model
     {
         return $this->hasMany(Garantia::class);
     }
-    public function destinos()
+    public function destino()
     {
-        return $this->hasMany(Destino::class);
+        return $this->belongsTo(Destino::class);
     }
 }

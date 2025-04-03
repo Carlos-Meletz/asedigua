@@ -40,9 +40,9 @@ use Carbon\Carbon;
                 number_format($movimiento->descuentos, 2) }}</span></p>
         <p class="text-xl font-semibold border border-gray-300"><strong>Líquido Entregado:</strong> <span
                 class="text-green-600">Q{{
-                number_format($movimiento->desembolso - $movimiento->descuentos, 2) }}</span></p>
+                number_format($movimiento->egreso, 2) }}</span></p>
         @else
-        PAGO: Q {{ number_format($movimiento->pago, 2) }}
+        PAGO: Q {{ number_format($movimiento->ingreso, 2) }}
         @endif
         </span></p>
 

@@ -124,17 +124,17 @@ class CajaResource extends Resource implements HasShieldPermissions
                 Tables\Columns\TextColumn::make('totalingresos')
                     ->numeric()
                     ->money('GTQ')
-                    ->state(fn($record) => (Ahmovimiento::where('caja_id', $record->id)->whereNull('deleted_at')->sum('deposito')) + (Crmovimiento::where('caja_id', $record->id)->whereNull('deleted_at')->sum('pago') + (Movimiento::where('caja_id', $record->id)->whereNull('deleted_at')->sum('ingreso'))))
+                    ->state(fn($record) => (Ahmovimiento::where('caja_id', $record->id)->whereNull('deleted_at')->sum('deposito')) + (Crmovimiento::where('caja_id', $record->id)->whereNull('deleted_at')->sum('ingreso') + (Movimiento::where('caja_id', $record->id)->whereNull('deleted_at')->sum('ingreso'))))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('totalegresos')
                     ->numeric()
                     ->money('GTQ')
-                    ->state(fn($record) => (Ahmovimiento::where('caja_id', $record->id)->whereNull('deleted_at')->sum(DB::raw('COALESCE(retiro, 0) + COALESCE(interes, 0) + COALESCE(penalizacion, 0)'))) + (Crmovimiento::where('caja_id', $record->id)->whereNull('deleted_at')->sum('desembolso')) + (Movimiento::where('caja_id', $record->id)->whereNull('deleted_at')->sum('egreso')))
+                    ->state(fn($record) => (Ahmovimiento::where('caja_id', $record->id)->whereNull('deleted_at')->sum(DB::raw('COALESCE(retiro, 0) + COALESCE(interes, 0) + COALESCE(penalizacion, 0)'))) + (Crmovimiento::where('caja_id', $record->id)->whereNull('deleted_at')->sum('egreso')) + (Movimiento::where('caja_id', $record->id)->whereNull('deleted_at')->sum('egreso')))
                     ->sortable(),
-                Tables\Columns\TextColumn::make('saldo')
-                    ->numeric()
-                    ->money('GTQ')
-                    ->sortable(),
+                // Tables\Columns\TextColumn::make('saldo')
+                //     ->numeric()
+                //     ->money('GTQ')
+                //     ->sortable(),
                 Tables\Columns\TextColumn::make('creado_por')
                     ->formatStateUsing(fn($state) => User::find($state)->username)
                     ->searchable()->toggleable(isToggledHiddenByDefault: true),

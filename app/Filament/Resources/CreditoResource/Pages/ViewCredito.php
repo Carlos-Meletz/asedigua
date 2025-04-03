@@ -19,7 +19,13 @@ class ViewCredito extends ViewRecord
         return [
             Html2MediaAction::make('plan')
                 ->label('Plan de Pagos')
-                ->content(fn($record) => view('pdf.plan_pagos', ['credito' => $record, 'plan' => Funciones::obtenerPlan($record)]))
+                ->content(fn($record) => view('pdf.plan_pagos', ['credito' => $record, 'plan' => Funciones::generarPlanPagos([
+                    'monto_solicitado' => $record->monto_solicitado,
+                    'interes_anual' => $record->interes_anual,
+                    'plazo' => $record->plazo,
+                    'tipo_cuota' => $record->tipo_cuota,
+                    'fecha_desembolso' => $record->fecha_desembolso,
+                ])]))
                 ->icon('heroicon-s-printer')
                 ->preview()
                 ->savePdf()

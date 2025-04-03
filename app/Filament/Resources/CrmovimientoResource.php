@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources;
 
-use view;
 use Carbon\Carbon;
 use Filament\Forms;
 use App\Models\Caja;
@@ -14,10 +13,7 @@ use Filament\Tables\Table;
 use App\Models\Crmovimiento;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Group;
-use Filament\Forms\Components\Split;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
-use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Actions;
 use Filament\Forms\Components\Section;
@@ -26,19 +22,17 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Tables\Actions\ActionGroup;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\RichEditor;
 use Filament\Tables\Actions\ExportAction;
 use Illuminate\Database\Eloquent\Builder;
-use Filament\Forms\Components\Placeholder;
-use Filament\Infolists\Components\TextEntry;
 use App\Filament\Exports\CrmovimientoExporter;
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Resources\CrmovimientoResource\Pages;
 use Torgodly\Html2Media\Tables\Actions\Html2MediaAction;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
-use App\Filament\Resources\CrmovimientoResource\RelationManagers;
 use Icetalker\FilamentTableRepeater\Forms\Components\TableRepeater;
+use Filament\Tables\Filters\TernaryFilter;
+
 
 class CrmovimientoResource extends Resource implements HasShieldPermissions
 {
@@ -111,7 +105,7 @@ class CrmovimientoResource extends Resource implements HasShieldPermissions
                             })
                             ->required()
                             ->native(false),
-                        Forms\Components\DateTimePicker::make('fecha')
+                        Forms\Components\DatePicker::make('fecha')
                             ->required()
                             ->label('Fecha')
                             ->reactive()
@@ -162,11 +156,13 @@ class CrmovimientoResource extends Resource implements HasShieldPermissions
                                     ->native(false),
                                 Forms\Components\TextInput::make('comprobante')
                                     ->required()
+                                    ->integer()
                                     ->default(fn($record) => ($record) ? $record->comprobante : ''),
-                                Forms\Components\TextInput::make('pago')
+                                Forms\Components\TextInput::make('ingreso')
                                     ->required()
+                                    ->label('Pago Sugerido')
                                     ->numeric()
-                                    ->default(fn($record) => ($record) ? $record->pago : '')
+                                    ->default(fn($record) => ($record) ? $record->ingreso : '')
                                     ->prefix('Q'),
                             ]),
 
@@ -237,7 +233,7 @@ class CrmovimientoResource extends Resource implements HasShieldPermissions
                                 DatePicker::make('fcontable')->label('Contable')->native(false)->readOnly(),
                                 DatePicker::make('fvalor')->label('Valor')->native(false)->readOnly(),
                                 TextInput::make('atraso')->label('Atraso')->readOnly(),
-                                TextInput::make('pago')->label('Pago')->prefix('Q')->readOnly(),
+                                TextInput::make('ingreso')->label('Pago')->prefix('Q')->readOnly(),
                                 TextInput::make('capital')->label('Capital')->prefix('Q')->readOnly(),
                                 TextInput::make('interes')->label('Interés')->prefix('Q')->readOnly(),
                                 TextInput::make('mora')->label('Mora')->prefix('Q')->readOnly(),
@@ -273,7 +269,7 @@ class CrmovimientoResource extends Resource implements HasShieldPermissions
                 Tables\Columns\TextColumn::make('comprobante')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('tipo'),
-                Tables\Columns\TextColumn::make('pago')
+                Tables\Columns\TextColumn::make('ingreso')
                     ->numeric()
                     ->money('GTQ')
                     ->sortable(),
@@ -302,7 +298,7 @@ class CrmovimientoResource extends Resource implements HasShieldPermissions
                     ->money('GTQ')
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
-                Tables\Columns\TextColumn::make('desembolso')
+                Tables\Columns\TextColumn::make('egreso')
                     ->numeric()
                     ->money('GTQ')
                     ->sortable(),
@@ -323,6 +319,15 @@ class CrmovimientoResource extends Resource implements HasShieldPermissions
             ])->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\TrashedFilter::make(),
+                TernaryFilter::make('solo_caja_abierta')
+                    ->label('Solo caja abierta')
+                    ->trueLabel('Sí')
+                    ->falseLabel('No')
+                    ->default(true)
+                    ->queries(
+                        true: fn($query) => $query->whereHas('caja', fn($q) => $q->where('abierta', true)),
+                        false: fn($query) => $query, // Muestra todos los movimientos si está en "No"
+                    ),
             ])
             ->headerActions([
                 ExportAction::make()->exporter(CrmovimientoExporter::class)->formats([
@@ -364,7 +369,7 @@ class CrmovimientoResource extends Resource implements HasShieldPermissions
                             }
                             $record->update([
                                 'notas' => '-Transaccion Anulada-',
-                                'pago' => 0,
+                                'ingreso' => 0,
                                 'capital' => 0,
                                 'interes' => 0,
                                 'descint' => 0,
@@ -376,6 +381,7 @@ class CrmovimientoResource extends Resource implements HasShieldPermissions
                                 'saldomor' => 0,
                                 'desembolso' => 0,
                                 'descuentos' => 0,
+                                'egreso' => 0,
                                 'anulado' => true,
                             ]);
                             Notification::make()
@@ -475,6 +481,9 @@ function calcularpago($state, $get, $set)
                 $capital_mes = $cuotaMensual - $interes_mes;
                 $capital_acumulado += $capital_mes;
                 if ($i > $meses_pagados) {
+                    if ($capital_acumulado > $montoTotal) {
+                        $capital_acumulado = $montoTotal;
+                    }
                     $capital_vencido = $capital_acumulado - $capitalpagado;
                 }
                 $saldo -= $capital_mes;
@@ -514,6 +523,9 @@ function calcularpago($state, $get, $set)
                 $capital_mes = $cuotaMensual - $interes_mes;
                 $capital_acumulado += $capital_mes;
                 if ($i > $meses_pagados) {
+                    if ($capital_acumulado > $montoTotal) {
+                        $capital_acumulado = $montoTotal;
+                    }
                     $capital_vencido = $capital_acumulado - $capitalpagado;
                 }
                 $saldo -= $capital_mes;
@@ -532,10 +544,7 @@ function calcularpago($state, $get, $set)
             $fechaProximoVencimiento = Carbon::parse($credito->fecha_vencimiento)->format('Y-m-d');
             $dias_transcurridos = intval($fecha_ultimo_pago->diffInDays($fechaActual));
 
-            $saldo = $montoTotal;
             $capital_vencido = 0;
-            $capital_acumulado = 0;
-            $capital_mes = 0;
             $capitalpagado = Crmovimiento::where('credito_id', $credito->id)->whereNull('deleted_at')->sum('capital');
             if ($fechaProximoVencimiento > $fechaActual) {
                 $diasAtraso = 0;
@@ -577,9 +586,12 @@ function calcularpago($state, $get, $set)
 
             for ($i = 1; $i <= $meses_transcurridos; $i++) {
                 $interes_mes = $montoTotal * $tasaInteresMensual;
-                $capital_mes = $cuotaMensual - ($montoTotal * $tasaInteresMensual);
+                $capital_mes = $cuotaMensual - ($interes_mes);
                 $capital_acumulado += $capital_mes;
                 if ($i > $meses_pagados) {
+                    if ($capital_acumulado > $montoTotal) {
+                        $capital_acumulado = $montoTotal;
+                    }
                     $capital_vencido = $capital_acumulado - $capitalpagado;
                 }
                 $saldo -= $capital_mes;
@@ -587,8 +599,10 @@ function calcularpago($state, $get, $set)
             $interes_apagar = $montoTotal * $tasaInteresMensual;
             $capital_vencido = max(0, $capital_vencido);
             $mora = 0;
-            $pago_sugerido = $interes_apagar;
+
+            $pago_sugerido = $interes_apagar + $capital_vencido;
             if ($diasAtraso > 0) {
+                $interes_apagar = $montoTotal * $tasaInteresMensual * ($meses_transcurridos - $meses_pagados);
                 $tasaMoraDiario = $credito->crelinea->tasa_mora / 365 / 100;
                 $mora = ($capital_vencido * $tasaMoraDiario) * $diasAtraso;
                 $pago_sugerido = $capital_vencido + $interes_apagar + $mora;
@@ -601,6 +615,6 @@ function calcularpago($state, $get, $set)
         $set('atraso', $diasAtraso);
         $set('total', number_format($credito->saldo_capital + $interes_apagar + $mora, 2, '.', ''));
         $set('saldo_capital', number_format($credito->saldo_capital, 2, '.', ''));
-        $set('pago', number_format($pago_sugerido, 2, '.', ''));
+        $set('ingreso', number_format($pago_sugerido, 2, '.', ''));
     }
 }

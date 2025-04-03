@@ -2,44 +2,40 @@
 
 namespace App\Filament\Resources;
 
-use Carbon\Carbon;
 use Filament\Forms;
-use App\Models\Caja;
 use Filament\Tables;
 use App\Models\Fondo;
 use App\Models\Credito;
 use App\Models\Crelinea;
-use Barryvdh\DomPDF\PDF;
 use Filament\Forms\Form;
 use App\Helpers\Funciones;
 use Filament\Tables\Table;
-
 use App\Models\Crmovimiento;
-use Filament\Actions\Action;
-use App\Models\Crelineacosto;
+use Illuminate\Support\Carbon;
 use Filament\Resources\Resource;
-use Symfony\Component\Clock\now;
-use Filament\Support\Colors\Color;
-use Filament\Forms\Components\Grid;
+use Filament\Tables\Filters\Filter;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Actions;
 use Filament\Forms\Components\Section;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Enums\FiltersLayout;
+use App\Filament\Exports\CreditoExporter;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\RichEditor;
+use Filament\Tables\Actions\ExportAction;
+use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
+
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\ToggleButtons;
+use Filament\Actions\Exports\Enums\ExportFormat;
 use App\Filament\Resources\CreditoResource\Pages;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Torgodly\Html2Media\Tables\Actions\Html2MediaAction;
-use App\Filament\Resources\CreditoResource\RelationManagers;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use Icetalker\FilamentTableRepeater\Forms\Components\TableRepeater;
 use App\Filament\Resources\CreditoResource\RelationManagers\FiadorsRelationManager;
@@ -61,10 +57,6 @@ class CreditoResource extends Resource implements HasShieldPermissions
             'desembolso',
             'rechazar',
             'planPagos',
-            // 'reciboDesembolso',
-            // 'cartaAutorizacion',
-            // 'contrato',
-            // 'pagare',
             'estadoCuenta',
             'fiadorCrear',
             'fiadorVer',
@@ -145,7 +137,7 @@ class CreditoResource extends Resource implements HasShieldPermissions
                                 $set('monto_max', $linea->monto_max);
                             }
                             Funciones::calcularDescuento($get, $set);
-                            // $record->calcularCuota($get, $set);
+                            // Funciones::calcularCuota($get, $set); //TO DO
                         })
                         ->afterStateUpdated(function ($state, callable $set, callable $get) {
                             $linea = Crelinea::find($state);
@@ -178,7 +170,7 @@ class CreditoResource extends Resource implements HasShieldPermissions
                         ->native(false),
                     Select::make('destino_id')
                         ->label('Destino del Crédito')
-                        ->relationship('destinos', 'nombre')
+                        ->relationship('destino', 'nombre')
                         ->createOptionForm([
                             Forms\Components\TextInput::make('nombre')
                                 ->required(),
@@ -191,6 +183,8 @@ class CreditoResource extends Resource implements HasShieldPermissions
                         ->optionsLimit(5)
                         ->preload()
                         ->required()
+                        ->reactive()
+                        ->live(onBlur: true)
                         ->native(false),
 
                     TextInput::make('monto_solicitado')
@@ -233,33 +227,15 @@ class CreditoResource extends Resource implements HasShieldPermissions
                             Funciones::calcularFechaPrimerPago($get, $set);
                         }),
 
-                    // Select::make('tipo_plazo')
-                    //     ->label('Tipo de Plazo')
-                    //     ->options([
-                    //         'diario' => 'Diario',
-                    //         'semanal' => 'Semanal',
-                    //         'quincenal' => 'Quincenal',
-                    //         'mensual' => 'Mensual',
-                    //     ])
-                    //     ->required()
-                    //     ->reactive()
-                    //     ->live(onBlur: true)
-                    //     ->afterStateUpdated(
-                    //         function (callable $set, callable $get) {
-                    //             Funciones::calcularFechaPrimerPago($get, $set);
-                    //             Funciones::calcularFechaVencimiento($get, $set);
-                    //         }
-                    //     )->native(false),
-
                     Select::make('tipo_cuota')
                         ->label('Tipo de Cuota')
                         ->options([
+                            'flat' => 'Flat',
                             'frances' => 'Sistema Francés (Cuotas Fijas)',
                             'aleman' => 'Sistema Alemán (Decreciente)',
                             'americano' => 'Sistema Americano (Pago Único)',
-                            'flat' => 'Flat',
                         ])
-                        ->default('frances')
+                        ->default('flat')
                         ->required()
                         ->reactive()
                         ->live(onBlur: true)
@@ -287,19 +263,19 @@ class CreditoResource extends Resource implements HasShieldPermissions
                     ToggleButtons::make('estado')
                         ->options([
                             'solicitado' => 'Solicitado',
-                            'aprobado' => 'Aprobado',
                             'desembolsado' => 'Desembolsado',
                             'rechazado' => 'Rechazado',
-                            'pendiente' => 'Pendiente',
+                            'vencidomora' => 'Vencido y en Atraso',
+                            'atrasado' => 'En Mora',
                             'pagado' => 'Pagado',
                             'vencido' => 'Vencido',
                         ])
                         ->colors([
                             'solicitado' => 'gray',
-                            'aprobado' => 'success',
-                            'desembolsado' => 'info',
+                            'atrasado' => 'warning',
+                            'desembolsado' => 'success',
                             'rechazado' => 'danger',
-                            'pendiente' => 'warning',
+                            'vencidomora' => 'info',
                             'pagado' => 'green',
                             'vencido' => 'red',
                         ])
@@ -310,22 +286,28 @@ class CreditoResource extends Resource implements HasShieldPermissions
                     Actions::make([
                         Actions\Action::make('generar_plan')
                             ->label('Ver Plan')
-                            ->action(fn(callable $get, callable $set) => $set('plan_pagos', Funciones::calcularPlanPagos($get, $set)))
+                            ->action(fn(callable $get, callable $set) => $set('plan_pagos', Funciones::generarPlanPagos([
+                                'monto_solicitado' => $get('monto_solicitado'),
+                                'interes_anual' => $get('interes_anual'),
+                                'plazo' => $get('plazo'),
+                                'tipo_cuota' => $get('tipo_cuota'),
+                                'fecha_desembolso' => $get('fecha_desembolso'),
+                            ], $set)))
                             ->color('primary')
                             ->icon('heroicon-o-document-text'),
                     ]),
-                    RichEditor::make('notas')
+                    Textarea::make('notas')
                         ->label('Notas')
                         ->columnSpanFull(),
                     TableRepeater::make('plan_pagos')
                         ->label('Plan de Pagos')
                         ->schema([
-                            TextInput::make('nocuota')->label('No.')->readOnly(),
-                            DatePicker::make('fecha')->label('Fecha')->native(false)->readOnly(),
-                            TextInput::make('cuota')->label('Cuota')->prefix('Q')->readOnly(),
-                            TextInput::make('interes')->label('Interés')->prefix('Q')->readOnly(),
-                            TextInput::make('capital')->label('Capital')->prefix('Q')->readOnly(),
-                            TextInput::make('saldo')->label('Saldo')->prefix('Q')->readOnly(),
+                            TextInput::make('nocuota')->label('No.')->readOnly()->extraAttributes(['class' => 'h-8']),
+                            DatePicker::make('fecha')->label('Fecha')->native(false)->readOnly()->extraAttributes(['class' => 'h-8']),
+                            TextInput::make('cuota')->label('Cuota')->prefix('Q')->readOnly()->extraAttributes(['class' => 'h-8']),
+                            TextInput::make('interes')->label('Interés')->prefix('Q')->readOnly()->extraAttributes(['class' => 'h-8']),
+                            TextInput::make('capital')->label('Capital')->prefix('Q')->readOnly()->extraAttributes(['class' => 'h-8']),
+                            TextInput::make('saldo')->label('Saldo')->prefix('Q')->readOnly()->extraAttributes(['class' => 'h-8']),
                         ])
                         ->reorderable(false)
                         ->cloneable(false)
@@ -357,6 +339,10 @@ class CreditoResource extends Resource implements HasShieldPermissions
                     ->numeric()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('destino.nombre')
+                    ->numeric()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('crelinea.nombre')
                     ->numeric()
                     ->sortable()
@@ -366,7 +352,6 @@ class CreditoResource extends Resource implements HasShieldPermissions
                 Tables\Columns\TextColumn::make('monto')
                     ->getStateUsing(fn($record) => match ($record->estado) {
                         'solicitado' => $record->monto_solicitado,
-                        'aprobado' => $record->monto_aprobado,
                         'desembolsado' => $record->monto_desembolsado,
                         default => $record->monto_desembolsado,
                     })
@@ -390,17 +375,14 @@ class CreditoResource extends Resource implements HasShieldPermissions
                 Tables\Columns\TextColumn::make('tipo_cuota')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                // Tables\Columns\TextColumn::make('tipo_plazo')
-                //     ->searchable()
-                //     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('estado')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
                         'solicitado' => 'gray',
-                        'aprobado' => 'success',
-                        'desembolsado' => 'info',
+                        'atrasado' => 'warning',
+                        'desembolsado' => 'success',
                         'rechazado' => 'danger',
-                        'pendiente' => 'warning',
+                        'vencidomora' => 'info',
                         'pagado' => 'primary',
                         'vencido' => 'Red',
                     }),
@@ -437,225 +419,72 @@ class CreditoResource extends Resource implements HasShieldPermissions
                     ->toggleable(isToggledHiddenByDefault: true),
             ])->defaultSort('estado', 'asc')
             ->filters([
+                Filter::make('fecha_desembolso')
+                    ->form([
+                        DatePicker::make('Desde'),
+                        DatePicker::make('Hasta'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['Desde'],
+                                fn(Builder $query, $date): Builder => $query->whereDate('fecha_desembolso', '>=', $date),
+                            )
+                            ->when(
+                                $data['Hasta'],
+                                fn(Builder $query, $date): Builder => $query->whereDate('fecha_desembolso', '<=', $date),
+                            );
+                    }),
+                SelectFilter::make('empleado_id')
+                    ->label('Asesor')
+                    ->relationship(
+                        'empleado',
+                        'id',
+                        fn(Builder $query) =>
+                        $query->where('cargo', 'analista_creditos')->with('cliente')
+                    )
+                    ->getOptionLabelFromRecordUsing(fn($record) => $record->cliente->nombre_completo)
+                    ->searchable()
+                    ->preload(), // Carga los datos automáticamente
+
+                SelectFilter::make('agencia_id')
+                    ->label('Agencia')
+                    ->relationship('agencia', 'nombre')
+                    ->searchable()
+                    ->preload(),
+
+                SelectFilter::make('destino_id')
+                    ->label('Destino de Crédito')
+                    ->relationship('destino', 'nombre')
+                    ->searchable()
+                    ->preload(),
+                SelectFilter::make('crelinea_id')
+                    ->label('Línea de Crédito')
+                    ->relationship('crelinea', 'nombre', fn(Builder $query) => $query->where('activo', true))
+                    ->searchable()
+                    ->preload(),
+
+                // Otros filtros personalizados
+                SelectFilter::make('estado')
+                    ->label('Estado del Crédito')
+                    ->options([
+                        'solicitado' => 'Solicitado',
+                        'atrasado' => 'Atrasado',
+                        'desembolsado' => 'Desembolsado',
+                        'rechazado' => 'Rechazado',
+                        'vencidomora' => 'Vencido y en Atraso',
+                        'pagado' => 'Pagado',
+                        'vencido' => 'Vencido',
+                    ]),
                 Tables\Filters\TrashedFilter::make(),
+
+            ], layout: FiltersLayout::AboveContent)
+            ->headerActions([
+                ExportAction::make()->exporter(CreditoExporter::class)->formats([
+                    ExportFormat::Xlsx,
+                ])
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-                Tables\Actions\Action::make('aprobar')
-                    ->label('Aprobación')
-                    ->modalWidth('sm')
-                    ->authorize(fn() => Gate::allows('aprobacion_credito'))
-                    ->extraModalWindowAttributes(['style' => 'width: 95vw; max-width: 1024px;
-                        @media (min-width: 1024px) {
-                            max-width: 50vw;
-                        }'])
-                    ->icon('heroicon-c-check-circle')
-                    ->action(function ($record, array $data) {
-                        // Lógica para aprobar el préstamo
-                        $record->update([
-                            'crelinea_id' => $data['crelinea_id'],
-                            'destino_id' => $data['destino_id'],
-                            'monto_aprobado' => $data['monto_aprobado'],
-                            'descuentos' => $data['descuentos'],
-                            'interes_anual' => $data['interes_anual'],
-                            'plazo' => $data['plazo'],
-                            'tipo_cuota' => $data['tipo_cuota'],
-                            'cuota' => $data['cuota'],
-                            'fecha_desembolso' => $data['fecha_desembolso'],
-                            'fecha_primerpago' => $data['fecha_primerpago'],
-                            'fecha_vencimiento' => $data['fecha_vencimiento'],
-                            'notas' => $data['notas'],
-                            'estado' => 'aprobado',
-                        ]);
-                        Notification::make()
-                            ->title('Crédito aprobado correctamente')
-                            ->success()
-                            ->send();
-                    })
-                    ->form([
-                        Section::make('Información General')
-                            ->schema([
-                                Placeholder::make('agencia_id')
-                                    ->label('Agencia')
-                                    ->content(fn($record) => $record->agencia->nombre),
-                                Placeholder::make('cliente_id')
-                                    ->label('Cliente')
-                                    ->content(fn($record) => $record->cliente->nombre_completo),
-                                Placeholder::make('codigo')
-                                    ->label('Codigo del Credito')
-                                    ->content(fn($record) => $record->codigo),
-                            ])->columns(3),
-                        Section::make('Datos de Aprobación')
-                            ->schema([
-                                Select::make('crelinea_id')
-                                    ->label('Línea de Crédito')
-                                    ->relationship('crelinea', 'nombre')
-                                    ->default(fn($record) => $record->crelinea_id)
-                                    ->searchable()
-                                    ->optionsLimit(5)
-                                    ->preload()
-                                    ->reactive()
-                                    ->live(onBlur: true)
-                                    ->afterStateHydrated(
-                                        function ($state, callable $set, callable $get) {
-                                            $linea = Crelinea::find($state);
-                                            if ($linea) {
-                                                $set('plazo_min', $linea->plazo_min);
-                                                $set('plazo_max', $linea->plazo_max);
-                                                $set('monto_min', $linea->monto_min);
-                                                $set('monto_max', $linea->monto_max);
-                                            }
-                                        }
-                                    )
-                                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                                        $linea = Crelinea::find($state);
-                                        if ($linea) {
-                                            $set('interes_anual', $linea->tasa_interes);
-                                            $set('plazo_min', $linea->plazo_min);
-                                            $set('plazo_max', $linea->plazo_max);
-                                            $set('monto_min', $linea->monto_min);
-                                            $set('monto_max', $linea->monto_max);
-                                            Funciones::calcularDescuento($get, $set);
-                                            Funciones::calcularCuota($get, $set);
-                                        }
-                                    })
-                                    ->required()
-                                    ->native(false),
-                                Select::make('destino_id')
-                                    ->label('Destino del Crédito')
-                                    ->relationship('destinos', 'nombre')
-                                    ->default(fn($record) => $record->destino_id)
-                                    ->createOptionForm([
-                                        Forms\Components\TextInput::make('nombre')
-                                            ->required(),
-                                    ])
-                                    ->editOptionForm([
-                                        Forms\Components\TextInput::make('nombre')
-                                            ->required(),
-                                    ])
-                                    ->searchable()
-                                    ->optionsLimit(5)
-                                    ->preload()
-                                    ->required()
-                                    ->native(false),
-                                TextInput::make('monto_aprobado')
-                                    ->label('Monto a Aprobar')
-                                    ->numeric()
-                                    ->default(fn($record) => $record->monto_solicitado)
-                                    ->prefix('Q')
-                                    ->reactive()
-                                    ->live(onBlur: true)
-                                    ->rule(fn(callable $get) => "between:{$get('monto_min')},{$get('monto_max')}")
-                                    ->required()
-                                    ->afterStateUpdated(function (callable $set, callable $get) {
-                                        Funciones::calcularDescuento($get, $set);
-                                        Funciones::calcularCuota($get, $set);
-                                    }),
-
-                                TextInput::make('descuentos')
-                                    ->label('Descuentos')
-                                    ->default(fn($record) => $record->descuentos)
-                                    ->numeric()
-                                    ->prefix('Q')
-                                    ->required(),
-
-                                TextInput::make('interes_anual')
-                                    ->label('Interés Anual')
-                                    ->numeric()
-                                    ->default(fn($record) => $record->interes_anual)
-                                    ->suffix('%')
-                                    ->step(0.01)
-                                    ->readOnly(),
-
-                                TextInput::make('plazo')
-                                    ->label('Plazo')
-                                    ->numeric()
-                                    ->default(fn($record) => $record->plazo)
-                                    ->required()
-                                    ->reactive()
-                                    ->live(onBlur: true)
-                                    ->rule(fn(callable $get) => "between:{$get('plazo_min')},{$get('plazo_max')}")
-                                    ->suffixIcon('heroicon-o-clock')
-                                    ->afterStateUpdated(function (callable $set, callable $get) {
-                                        Funciones::calcularFechaVencimiento($get, $set);
-                                        Funciones::calcularFechaPrimerPago($get, $set);
-                                        Funciones::calcularCuota($get, $set);
-                                    }),
-
-                                // Select::make('tipo_plazo')
-                                //     ->label('Tipo de Plazo')
-                                //     ->options([
-                                //         'diario' => 'Diario',
-                                //         'semanal' => 'Semanal',
-                                //         'quincenal' => 'Quincenal',
-                                //         'mensual' => 'Mensual',
-                                //     ])
-                                //     ->default(fn($record) => $record->tipo_plazo)
-                                //     ->required()
-                                //     ->reactive()
-                                //     ->live(onBlur: true)
-                                //     ->afterStateUpdated(
-                                //         function (callable $set, callable $get) {
-                                //             Funciones::calcularFechaPrimerPago($get, $set);
-                                //             Funciones::calcularFechaVencimiento($get, $set);
-                                //             Funciones::calcularCuota($get, $set);
-                                //         }
-                                // )->native(false),
-
-
-                                Select::make('tipo_cuota')
-                                    ->label('Tipo de Cuota')
-                                    ->options([
-                                        'frances' => 'Sistema Francés (Cuotas Fijas)',
-                                        'aleman' => 'Sistema Alemán (Decreciente)',
-                                        'americano' => 'Sistema Americano (Pago Único)',
-                                        'flat' => 'Flat',
-                                    ])
-                                    ->default(fn($record) => $record->tipo_cuota)
-                                    ->required()
-                                    ->reactive()
-                                    ->live(onBlur: true)
-                                    ->afterStateUpdated(
-                                        function (callable $set, callable $get) {
-                                            Funciones::calcularCuota($get, $set);
-                                        }
-                                    )
-                                    ->native(false),
-
-                                TextInput::make('cuota')
-                                    ->label('Cuota')
-                                    ->numeric()
-                                    ->default(fn($record) => $record->cuota)
-                                    ->prefix('Q')
-                                    ->readOnly(),
-
-                                DatePicker::make('fecha_desembolso')->label('Fecha')
-                                    ->default(fn($record) => $record->fecha_desembolso)
-                                    ->reactive()
-                                    ->live(onBlur: true)
-                                    ->afterStateUpdated(
-                                        function (callable $set, callable $get) {
-                                            Funciones::calcularFechaPrimerPago($get, $set);
-                                            Funciones::calcularFechaVencimiento($get, $set);
-                                        }
-                                    ),
-                                DatePicker::make('fecha_primerpago')->label('Fecha del Primer Pago')
-                                    ->default(fn($record) => $record->fecha_primerpago),
-                                DatePicker::make('fecha_vencimiento')->label('Fecha de Vencimiento')
-                                    ->default(fn($record) => $record->fecha_vencimiento),
-
-                                RichEditor::make('notas')
-                                    ->columnSpanFull()
-                                    ->label('Notas')
-                                    ->default(fn($record) => $record->notas),
-                            ])->columns(3),
-                    ])
-                    ->color('success')
-                    ->visible(fn(Credito $credito) => $credito->estado === 'solicitado')
-                    ->requiresConfirmation(),
-
                 Tables\Actions\Action::make('desembolsar')
                     ->label('Desembolso')
                     ->modalWidth('sm')
@@ -682,7 +511,7 @@ class CreditoResource extends Resource implements HasShieldPermissions
                                     ->content(fn($record) => $record->codigo),
                             ])->columns(3),
                         Section::make('Registrar Movimiento')->schema([
-                            Forms\Components\TextInput::make('comprobante')
+                            TextInput::make('comprobante')
                                 ->required(),
                             Select::make('tipo')
                                 ->label('Tipo de Pago')
@@ -732,7 +561,7 @@ class CreditoResource extends Resource implements HasShieldPermissions
                                     ->native(false),
                                 Select::make('destino_id')
                                     ->label('Destino del Crédito')
-                                    ->relationship('destinos', 'nombre')
+                                    ->relationship('destino', 'nombre')
                                     ->default(fn($record) => $record->destino_id)
                                     ->createOptionForm([
                                         Forms\Components\TextInput::make('nombre')
@@ -751,7 +580,7 @@ class CreditoResource extends Resource implements HasShieldPermissions
                                 TextInput::make('monto_desembolsado')
                                     ->label('Monto a Desembolsar')
                                     ->numeric()
-                                    ->default(fn($record) => $record->monto_aprobado)
+                                    ->default(fn($record) => $record->monto_solicitado)
                                     ->prefix('Q')
                                     ->reactive()
                                     ->live(onBlur: true)
@@ -792,24 +621,6 @@ class CreditoResource extends Resource implements HasShieldPermissions
                                         Funciones::calcularCuota($get, $set);
                                     }),
 
-                                // Select::make('tipo_plazo')
-                                //     ->label('Tipo de Plazo')
-                                //     ->options([
-                                //         'diario' => 'Diario',
-                                //         'semanal' => 'Semanal',
-                                //         'quincenal' => 'Quincenal',
-                                //         'mensual' => 'Mensual',
-                                //     ])
-                                //     ->default(fn($record) => $record->tipo_plazo)
-                                //     ->required()
-                                //     ->reactive()
-                                //     ->live(onBlur: true)
-                                //     ->afterStateUpdated(
-                                //         function (callable $set, callable $get) {
-                                //             Funciones::calcularFechaPrimerPago($get, $set);
-                                //             Funciones::calcularFechaVencimiento($get, $set);
-                                //         }
-                                //     )->native(false),
 
                                 Select::make('tipo_cuota')
                                     ->label('Tipo de Cuota')
@@ -852,19 +663,28 @@ class CreditoResource extends Resource implements HasShieldPermissions
                                 DatePicker::make('fecha_vencimiento')->label('Fecha de Vencimiento')
                                     ->default(fn($record) => $record->fecha_vencimiento),
 
-                                RichEditor::make('notas')
+                                Textarea::make('notas')
                                     ->columnSpanFull()
                                     ->label('Notas')
                                     ->default(fn($record) => $record->notas),
                             ])->columns(4),
                     ])
-                    ->visible(fn(Credito $credito) => $credito->estado === 'aprobado')
+                    ->visible(fn(Credito $credito) => $credito->estado === 'solicitado')
                     ->color('success')
                     ->requiresConfirmation(),
                 ActionGroup::make([
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make(),
                     Html2MediaAction::make('plan')
                         ->label('Plan')
-                        ->content(fn($record) => view('pdf.plan_pagos', ['credito' => $record, 'plan' => Funciones::obtenerPlan($record)]))
+                        ->content(fn($record) => view('pdf.plan_pagos', ['credito' => $record, 'plan' => Funciones::generarPlanPagos([
+                            'monto_solicitado' => $record->monto_solicitado,
+                            'interes_anual' => $record->interes_anual,
+                            'plazo' => $record->plazo,
+                            'tipo_cuota' => $record->tipo_cuota,
+                            'fecha_desembolso' => $record->fecha_desembolso,
+                        ])]))
                         ->icon('heroicon-s-printer')
                         ->preview()
                         ->savePdf()
@@ -872,51 +692,7 @@ class CreditoResource extends Resource implements HasShieldPermissions
                         ->format('letter', 'in')
                         ->margin([0.3, 0.5, 0.3, 0.5])
                         ->authorize(fn() => Gate::allows('planPagos_credito'))
-                        ->visible(fn($record) => in_array($record->estado, ['aprobado', 'desembolsado', 'vencido', 'pagado'])),
-                    // Html2MediaAction::make('recibo')
-                    //     ->label('Recibo Desembolso')
-                    //     ->content(fn($record) => view('pdf.recibo_desembolso', ['credito' => $record]))
-                    //     ->icon('heroicon-s-printer')
-                    //     ->preview()
-                    //     ->savePdf()
-                    //     ->margin([0.3, 0.5, 0.3, 0.5])
-                    //     ->filename(fn($record) => 'RecDesembolso_' . $record->codigo . '.pdf')
-                    //     ->format('letter', 'in')
-                    //     ->authorize(fn() => Gate::allows('reciboDesembolso_credito'))
-                    //     ->visible(fn($record) => in_array($record->estado, ['desembolsado'])),
-                    // Html2MediaAction::make('autorizacion')
-                    //     ->label('Carta Autorizacion')
-                    //     ->content(fn($record) => view('pdf.autorizacion_credito', ['credito' => $record]))
-                    //     ->icon('heroicon-s-printer')
-                    //     ->preview()
-                    //     ->savePdf()
-                    //     ->margin([0.3, 0.5, 0.3, 0.5])
-                    //     ->filename(fn($record) => 'CrtAutorizacion_' . $record->codigo . '.pdf')
-                    //     ->format('letter', 'in')
-                    //     ->authorize(fn() => Gate::allows('cartaAutorizacion_credito'))
-                    //     ->visible(fn($record) => in_array($record->estado, ['aprobado', 'desembolsado'])),
-                    // Html2MediaAction::make('contrato')
-                    //     ->label('Contrato')
-                    //     ->content(fn($record) => view('pdf.contrato_credito', ['credito' => $record]))
-                    //     ->icon('heroicon-s-printer')
-                    //     ->preview()
-                    //     ->savePdf()
-                    //     ->margin([0.3, 0.5, 0.3, 0.5])
-                    //     ->filename(fn($record) => 'Contrato_' . $record->codigo . '.pdf')
-                    //     ->format('letter', 'in')
-                    //     ->authorize(fn() => Gate::allows('contrato_credito'))
-                    //     ->visible(fn($record) => in_array($record->estado, ['desembolsado'])),
-                    // Html2MediaAction::make('pagare')
-                    //     ->label('Pagare')
-                    //     ->content(fn($record) => view('pdf.pagare_credito', ['credito' => $record]))
-                    //     ->icon('heroicon-s-printer')
-                    //     ->preview()
-                    //     ->savePdf()
-                    //     ->margin([0.3, 0.5, 0.3, 0.5])
-                    //     ->filename(fn($record) => 'Pagare_' . $record->codigo . '.pdf')
-                    //     ->format('letter', 'in')
-                    //     ->authorize(fn() => Gate::allows('pagare_credito'))
-                    //     ->visible(fn($record) => in_array($record->estado, ['desembolsado'])),
+                        ->visible(fn($record) => in_array($record->estado, ['solicitado', 'desembolsado', 'vencido', 'pagado'])),
                     Tables\Actions\Action::make('rechazar')
                         ->label('Rechazar')
                         ->icon('heroicon-s-x-circle')
@@ -931,10 +707,10 @@ class CreditoResource extends Resource implements HasShieldPermissions
                                 ->send();
                         })
                         ->form([
-                            RichEditor::make('notas')->columnSpanFull()->label('Notas')->default(fn($record) => $record->notas),
+                            Textarea::make('notas')->columnSpanFull()->label('Notas')->default(fn($record) => $record->notas),
                         ])
                         ->color('danger')
-                        ->visible(fn(Credito $credito) => in_array($credito->estado, ['solicitado', 'aprobado']))
+                        ->visible(fn(Credito $credito) => in_array($credito->estado, ['solicitado']))
                         ->authorize(fn() => Gate::allows('rechazar_credito'))
                         ->requiresConfirmation(),
                 ]),

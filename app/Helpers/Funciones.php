@@ -11,6 +11,7 @@ use App\Models\Crmovimiento;
 use App\Models\Crelineacosto;
 use Illuminate\Support\Facades\Gate;
 use Filament\Notifications\Notification;
+use Illuminate\Validation\ValidationException;
 use Torgodly\Html2Media\Actions\Html2MediaAction;
 
 class Funciones
@@ -73,126 +74,6 @@ class Funciones
     }
 
 
-    public static function obtenerPlan($record)
-    {
-        $monto = $record->monto_solicitado;
-        $interesAnual = $record->interes_anual;
-        $plazo = $record->plazo;
-        $tipoPlazo = $record->tipo_plazo;
-        $tipoCuota = $record->tipo_cuota;
-        $fechaDesembolso = $record->fecha_desembolso;
-        if ($monto && $interesAnual && $plazo && $tipoCuota && $fechaDesembolso) {
-
-            $plan = [];
-            $interesMensual = ($interesAnual / 100) / 12;
-            $fechaPago = Carbon::parse($fechaDesembolso);
-            $saldo = $monto;
-
-            for ($i = 1; $i <= $plazo; $i++) {
-
-                if ($tipoCuota === 'frances') {
-                    $cuota = ($monto * $interesMensual) / (1 - pow(1 + $interesMensual, -$plazo));
-                    $capital =  $cuota - ($saldo * $interesMensual);
-                    $interes =  $saldo * $interesMensual;
-                }
-                if ($tipoCuota === 'aleman') {
-                    $cuota = $saldo / ($plazo - ($i - 1)) + ($saldo * $interesMensual);
-                    $capital =  $cuota - ($saldo * $interesMensual);
-                    $interes =  $saldo * $interesMensual;
-                }
-                if ($tipoCuota === 'americano') {
-                    $cuota = ($i === $plazo) ? $saldo + ($saldo * $interesMensual * $plazo) : ($saldo * $interesMensual);
-                    if ($i == $plazo) {
-                        $cuota = $saldo + ($saldo * $interesMensual);
-                    }
-                    $capital =  $cuota - ($saldo * $interesMensual);
-                    $interes =  $saldo * $interesMensual;
-                }
-                if ($tipoCuota === 'flat') {
-                    $cuota = ($monto + ($monto * (($interesAnual / 100) / 12) * $plazo)) / $plazo;
-                    $capital =  $cuota - ($monto * $interesMensual);
-                    $interes =  $monto * $interesMensual;
-                }
-
-                // Calcular saldo restante
-                $saldo -= $capital;
-
-                $fechaPago = $fechaPago->addMonth();
-
-                $plan[] = [
-                    'nocuota' => $i,
-                    'fecha' => $fechaPago->format('Y-m-d'),
-                    'cuota' => round($cuota, 2),
-                    'interes' => round($interes, 2),
-                    'capital' => round($capital, 2),
-                    'saldo' => round($saldo, 2),
-                ];
-            }
-            return $plan;
-        }
-        return;
-    }
-
-    public static function calcularPlanPagos(callable $get, $set)
-    {
-        $monto = $get('monto_solicitado');
-        $interesAnual = $get('interes_anual');
-        $plazo = $get('plazo');
-        $tipoCuota = $get('tipo_cuota');
-        $fechaDesembolso = $get('fecha_desembolso');
-        if ($monto && $interesAnual && $plazo && $tipoCuota && $fechaDesembolso) {
-
-            $plan = [];
-            $interesMensual = $interesAnual / 12 / 100;
-            $fechaPago = Carbon::parse($fechaDesembolso);
-            $saldo = $monto;
-
-            for ($i = 1; $i <= $plazo; $i++) {
-
-                if ($tipoCuota === 'frances') {
-                    $cuota = ($monto * $interesMensual) / (1 - pow(1 + $interesMensual, -$plazo));
-                    $capital =  $cuota - ($saldo * $interesMensual);
-                    $interes =  $saldo * $interesMensual;
-                }
-                if ($tipoCuota === 'aleman') {
-                    $cuota = $saldo / ($plazo - ($i - 1)) + ($saldo * $interesMensual);
-                    $capital =  $cuota - ($saldo * $interesMensual);
-                    $interes =  $saldo * $interesMensual;
-                }
-                if ($tipoCuota === 'americano') {
-                    $cuota = ($i === $plazo) ? $saldo + ($saldo * $interesMensual * $plazo) : ($saldo * $interesMensual);
-                    if ($i == $plazo) {
-                        $cuota = $saldo + ($saldo * $interesMensual);
-                    }
-                    $capital =  $cuota - ($saldo * $interesMensual);
-                    $interes =  $saldo * $interesMensual;
-                }
-                if ($tipoCuota === 'flat') {
-                    $cuota = ($monto + ($monto * (($interesAnual / 100) / 12) * $plazo)) / $plazo;
-                    $capital =  $cuota - ($monto * $interesMensual);
-                    $interes =  $monto * $interesMensual;
-                }
-
-                // Calcular saldo restante
-                $saldo -= $capital;
-                // Determinar fecha de pago según tipo de plazo
-                if ($i == 1) $set('cuota', round($cuota, 2));
-
-                $fechaPago = $fechaPago->addMonth();
-
-                $plan[] = [
-                    'nocuota' => $i,
-                    'fecha' => $fechaPago->format('Y-m-d'),
-                    'cuota' => round($cuota, 2),
-                    'interes' => round($interes, 2),
-                    'capital' => round($capital, 2),
-                    'saldo' => round($saldo, 2),
-                ];
-            }
-            return $plan;
-        }
-        return;
-    }
     public static function obtenerHistorial(callable $get, $set)
     {
         $creditoId = $get('credito_id');
@@ -221,6 +102,65 @@ class Funciones
         }
         return $plan;
     }
+
+    public static function generarPlanPagos($datos, $set = null)
+    {
+        $monto = $datos['monto_solicitado'] ?? null;
+        $interesAnual = $datos['interes_anual'] ?? null;
+        $plazo = $datos['plazo'] ?? null;
+        $tipoCuota = $datos['tipo_cuota'] ?? null;
+        $fechaDesembolso = $datos['fecha_desembolso'] ?? null;
+
+        if ($monto && $interesAnual && $plazo && $tipoCuota && $fechaDesembolso) {
+            $plan = [];
+            $interesMensual = $interesAnual / 12 / 100;
+            $fechaPago = Carbon::parse($fechaDesembolso);
+            $saldo = $monto;
+
+            for ($i = 1; $i <= $plazo; $i++) {
+                if ($tipoCuota === 'frances') {
+                    $cuota = ($monto * $interesMensual) / (1 - pow(1 + $interesMensual, -$plazo));
+                    $capital =  $cuota - ($saldo * $interesMensual);
+                    $interes =  $saldo * $interesMensual;
+                } elseif ($tipoCuota === 'aleman') {
+                    $cuota = $saldo / ($plazo - ($i - 1)) + ($saldo * $interesMensual);
+                    $capital =  $cuota - ($saldo * $interesMensual);
+                    $interes =  $saldo * $interesMensual;
+                } elseif ($tipoCuota === 'americano') {
+                    $cuota = ($i === $plazo) ? $saldo + ($saldo * $interesMensual * $plazo) : ($saldo * $interesMensual);
+                    $capital =  $cuota - ($saldo * $interesMensual);
+                    $interes =  $saldo * $interesMensual;
+                } elseif ($tipoCuota === 'flat') {
+                    $cuota = ($monto + ($monto * (($interesAnual / 100) / 12) * $plazo)) / $plazo;
+                    $capital =  $cuota - ($monto * $interesMensual);
+                    $interes =  $monto * $interesMensual;
+                }
+
+                // Calcular saldo restante
+                $saldo -= $capital;
+                $fechaPago = $fechaPago->addMonth();
+
+                $plan[] = [
+                    'nocuota' => $i,
+                    'fecha' => $fechaPago->format('Y-m-d'),
+                    'cuota' => round($cuota, 2),
+                    'interes' => round($interes, 2),
+                    'capital' => round($capital, 2),
+                    'saldo' => round($saldo, 2),
+                ];
+            }
+
+            // Si la función se usa en un formulario, actualiza el valor de la cuota
+            if ($set !== null && $plazo > 0) {
+                $set('cuota', round($cuota, 2));
+            }
+
+            return $plan;
+        }
+
+        return [];
+    }
+
 
     public static function calcularCuota(callable $get, callable $set)
     {
@@ -277,11 +217,27 @@ class Funciones
 
     public static function registrarMovimientoDesembolso($record, $data)
     {
+
+
         $cajaActiva = Caja::where('agencia_id', $record->agencia_id)->where('abierta', true)->first();
         $creditos = Credito::where('cliente_id', $record->cliente_id)->whereIn('estado', ['desembolsado', 'pagado', 'vencido'])->get();
+        $existe = Crmovimiento::where('comprobante', $data['comprobante'])
+            ->where('agencia_id', $record->agencia_id)
+            ->exists();
+
+        if ($existe) {
+            Notification::make()
+                ->title('Comprobante Operado!')
+                ->warning()
+                ->body("El comprobante: {$data['comprobante']} ya esta registrado.")
+                ->send();
+            throw ValidationException::withMessages([
+                'comprobante' => 'El número de comprobante ya ha sido registrado en esta agencia.',
+            ]);
+        }
 
         if ($cajaActiva) {
-            $monto = floatval($data['monto_desembolsado']);
+            $montoliquido = floatval($data['monto_desembolsado'] - $data['descuentos']);
             $numeroRenovaciones = $creditos->count();
             $record->update([
                 'crelinea_id' => $data['crelinea_id'],
@@ -290,7 +246,6 @@ class Funciones
                 'descuentos' => $data['descuentos'],
                 'interes_anual' => $data['interes_anual'],
                 'plazo' => $data['plazo'],
-                // 'tipo_plazo' => $data['tipo_plazo'],
                 'tipo_cuota' => $data['tipo_cuota'],
                 'cuota' => $data['cuota'],
                 'fecha_desembolso' => $data['fecha_desembolso'],
@@ -311,12 +266,13 @@ class Funciones
                 'tipo'             => $data['tipo'],
                 'desembolso'         => $data['monto_desembolsado'],
                 'descuentos'            => $data['descuentos'],
+                'egreso'            => $montoliquido,
                 'saldocap'            => $data['monto_desembolsado'],
                 'notas'            => 'Desembolso',
             ]);
             Notification::make()
                 ->title('Desembolso Exitoso')
-                ->body("Se ha realizado el desembolso de Q{$monto}, crédito: {$record->codigo}.")
+                ->body("Se ha realizado el desembolso de Q{$montoliquido}, crédito: {$record->codigo}.")
                 ->success()
                 ->send();
         } else {

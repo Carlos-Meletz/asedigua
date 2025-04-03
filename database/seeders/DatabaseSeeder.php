@@ -3,18 +3,13 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
         $this->call(GuatemalaSeeder::class);
 
         User::factory()->create([
@@ -28,66 +23,40 @@ class DatabaseSeeder extends Seeder
             'updated_at' => now(),
         ]);
         User::factory()->create([
-            'name' => 'Steven Stuart',
-            'username' => 'stvSt',
-            'email' => 'user@simec.com',
+            'name' => 'Eulalio Tuy ',
+            'username' => 'eult',
+            'email' => 'eulalio@simec.com',
             'email_verified_at' => NULL,
-            'password' => '$2y$12$979sNzerC6Wp2yYRyxevWu1rY7aSRTd64zZEi/hHWA/zkXAg6yati',
+            'password' => '$2y$12$5vqnMrl32mGsvmQeddrkq.irZ0KjCxlCkQhPTw4vcg3xUPXZvVI/.',
             'remember_token' => NULL,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
         DB::table('agencias')->insert([
-            'nombre' => 'Central Sololá',
+            'nombre' => 'Central Xajaxac',
             'codigo' => '001',
             'departamento' => '277',
             'municipio' => '278',
-            'direccion' => '15 Avenida, Barrio el Carmen',
+            'direccion' => 'Km 132, Caserío Cipresales, aldea Xajaxac',
             'latitude' => 14.76906722,
             'longitude' => -91.18349791,
-            'telefono' => '77623238',
-            'email' => 'central@simec.com',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-        DB::table('agencias')->insert([
-            'nombre' => 'Xajaxac',
-            'codigo' => '002',
-            'departamento' => '277',
-            'municipio' => '278',
-            'direccion' => 'Xajaxac, Sololá',
-            'latitude' => 14.76906722,
-            'longitude' => -91.18349791,
-            'telefono' => '77623238',
-            'email' => 'xajaxac@simec.com',
+            'telefono' => '28704350',
+            'email' => 'asediguacentral@simec.com',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
         DB::table('crelineas')->insert([
-            'nombre' => 'MICROEMPRESA 24%',
-            'tasa_interes' => 24.00,
-            'tasa_mora' => 1.00,
+            'nombre' => 'FIDUCIARIO 60%',
+            'tasa_interes' => 60.00,
+            'tasa_mora' => 60.00,
             'plazo_min' => 3,
-            'plazo_max' => 36,
+            'plazo_max' => 18,
             'monto_min' => 500.00,
-            'monto_max' => 50000.00,
+            'monto_max' => 20000.00,
             'activo' => 1,
-            'condiciones' => 'Préstamos para microempresas',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-        DB::table('crelineas')->insert([
-            'nombre' => 'AGRICOLA 12%',
-            'tasa_interes' => 12.00,
-            'tasa_mora' => 1.00,
-            'plazo_min' => 1,
-            'plazo_max' => 6,
-            'monto_min' => 500.00,
-            'monto_max' => 25000.00,
-            'activo' => 0,
-            'condiciones' => 'Prestamos para inversión en agricultura y exportación, con disposición de pago de capital al vencimiento.',
+            'condiciones' => 'Prestamos sin garantia, para clientes con buen record crediticio',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -101,24 +70,7 @@ class DatabaseSeeder extends Seeder
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('crelineacostos')->insert([
-            'crelinea_id' => 1,
-            'tipo' => 'microseguro',
-            'es_porcentaje' => 0,
-            'valor' => 150.00,
-            'aplicacion' => 'cuotas',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-        DB::table('crelineacostos')->insert([
-            'crelinea_id' => 2,
-            'tipo' => 'costo_administrativo',
-            'es_porcentaje' => 1,
-            'valor' => 3.00,
-            'aplicacion' => 'desembolso',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+
         DB::table('aholineas')->insert([
             'nombre' => 'PROMESA 10%',
             'tasa_interes' => 10.00,
@@ -159,9 +111,35 @@ class DatabaseSeeder extends Seeder
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        DB::table('clientes')->insert([
+            'nombre' => 'Karen Estefany',
+            'apellido' => 'Vásquez Girón',
+            'fecha_nacimiento' => '2000-10-20',
+            'edad' => 25,
+            'genero' => 'femenino',
+            'dpi' => '3104 91183 0701',
+            'dpi_dep' => '277',
+            'dpi_mun' => '278',
+            'estado_civil' => 'soltera',
+            'estado' => 'activo',
+            'fotografia' => NULL,
+            'telefono' => '32423423',
+            'celular' => NULL,
+            'correo' => NULL,
+            'social' => 1,
+            'archivos' => '[]',
+            'departamento' => '277',
+            'municipio' => '279',
+            'direccion' => 'Zona 1 sololá',
+            'latitude' => 14.77172500,
+            'longitude' => -91.21608600,
+            'notas' => NULL,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         DB::table('fondos')->insert([
-            'nombre' => 'Fondos de Ahorrantes General',
+            'nombre' => 'Fondos de Ahorros',
             'tipo' => 'ahorro',
             'balance' => 0.00,
             'descripcion' => NULL,
@@ -170,7 +148,7 @@ class DatabaseSeeder extends Seeder
             'updated_at' => now(),
         ]);
         DB::table('fondos')->insert([
-            'nombre' => 'Fondo de Créditos Microempresa',
+            'nombre' => 'Fondo de Créditos',
             'tipo' => 'credito',
             'balance' => 0.00,
             'descripcion' => NULL,
@@ -178,24 +156,74 @@ class DatabaseSeeder extends Seeder
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('fondos')->insert([
-            'nombre' => 'Fondo Ahorro Infantil',
-            'tipo' => 'ahorro',
-            'balance' => 0.00,
-            'descripcion' => NULL,
-            'activo' => 1,
+        DB::table('destinos')->insert([
+            'nombre' => 'ARTESANIA',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        DB::table('fondos')->insert([
+        DB::table('destinos')->insert([
+            'nombre' => 'AGRICULTURA',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('destinos')->insert([
+            'nombre' => 'COMERCIO',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('empleados')->insert([
+            'agencia_id' => 1,
+            'cliente_id' => 1,
+            'cargo' => 'analista_creditos',
+            'salario' => 3500.00,
+            'fecha_ingreso' => '2025-04-02',
+            'fecha_salida' => NULL,
+            'estado' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('empleados')->insert([
+            'agencia_id' => 1,
+            'cliente_id' => 2,
+            'cargo' => 'analista_creditos',
+            'salario' => 3500.00,
+            'fecha_ingreso' => '2025-04-02',
+            'fecha_salida' => NULL,
+            'estado' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('cajas')->insert([
+            'agencia_id' => 1,
+            'fecha_apertura' => now(),
+            'fecha_cierre' => NULL,
+            'ahingresos' => 0.00,
+            'ahegresos' => 0.00,
+            'cringresos' => 0.00,
+            'cregresos' => 0.00,
+            'otingresos' => 0.00,
+            'otegresos' => 0.00,
+            'totalingresos' => 0.00,
+            'totalegresos' => 0.00,
+            'saldo' => 0.00,
+            'creado_por' => '1',
+            'actualizado_por' => '1',
+            'abierta' => 1,
+
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+
+        DB::table('empresas')->insert([
             'nombre' => 'ASEDIGUA',
             'razon_social' => NULL,
-            'nit' => '10836066',
+            'nit' => '123456789',
             'tipo_empresa' => 'S.R.L.',
-            'fecha_constitucion' => '2025-03-12',
-            'direccion_fiscal' => 'Xajaxac',
+            'fecha_constitucion' => '2024-08-01',
+            'direccion_fiscal' => 'Km 132, Caserío Cipresales, aldea Xajaxac',
             'rps_nombre' => 'Jose Lopez',
-            'rps_dpi' => '3108911830701',
+            'rps_dpi' => '3108582530701',
             'rps_dpiDep' => '77',
             'rps_dpiMun' => '55',
             'rps_cargo' => 'Gerente',
@@ -206,6 +234,130 @@ class DatabaseSeeder extends Seeder
             'rps_direccion' => 'Solola',
             'logo' => '01JP6VPAQX8D5F6T8MQNEFRVDN.png',
             'rps_telefono' => NULL,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('creditos')->insert([
+            'agencia_id' => 1,
+            'cliente_id' => 2,
+            'fondo_id' => 2,
+            'empleado_id' => 1,
+            'crelinea_id' => 1,
+            'destino_id' => 1,
+            'codigo' => 'CR-00100000001',
+            'monto_solicitado' => 20000.00,
+            'monto_aprobado' => 0.00,
+            'monto_desembolsado' => 20000.00,
+            'descuentos' => 1000.00,
+            'saldo_capital' => 20000.00,
+            'saldo_interes' => 0.00,
+            'saldo_mora' => 0.00,
+            'interes_anual' => 60.00,
+            'plazo' => 12,
+            'tipo_cuota' => 'flat',
+            'estado' => 'desembolsado',
+            'fecha_desembolso' => '2025-04-02',
+            'fecha_primerpago' => '2025-05-02',
+            'fecha_vencimiento' => '2026-04-02',
+            'dias_atraso' => 0,
+            'cuota' => 2666.67,
+            'fecha_ultimopago' => '2025-04-02',
+            'numero_renovaciones' => 0,
+            'notas' => NULL,
+            'deleted_at' => NULL,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('creditos')->insert([
+            'agencia_id' => 1,
+            'cliente_id' => 1,
+            'fondo_id' => 2,
+            'empleado_id' => 2,
+            'crelinea_id' => 1,
+            'destino_id' => 3,
+            'codigo' => 'CR-00100000002',
+            'monto_solicitado' => 15000.00,
+            'monto_aprobado' => 0.00,
+            'monto_desembolsado' => 15000.00,
+            'descuentos' => 750.00,
+            'saldo_capital' => 15000.00,
+            'saldo_interes' => 0.00,
+            'saldo_mora' => 0.00,
+            'interes_anual' => 60.00,
+            'plazo' => 8,
+            'tipo_cuota' => 'flat',
+            'estado' => 'desembolsado',
+            'fecha_desembolso' => '2025-04-02',
+            'fecha_primerpago' => '2025-05-02',
+            'fecha_vencimiento' => '2025-12-02',
+            'dias_atraso' => 0,
+            'cuota' => 2625.00,
+            'fecha_ultimopago' => '2025-04-02',
+            'numero_renovaciones' => 0,
+            'notas' => NULL,
+            'deleted_at' => NULL,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('creditos')->insert([
+            'agencia_id' => 1,
+            'cliente_id' => 1,
+            'fondo_id' => 2,
+            'empleado_id' => 2,
+            'crelinea_id' => 1,
+            'destino_id' => 1,
+            'codigo' => 'CR-00100000003',
+            'monto_solicitado' => 12000.00,
+            'monto_aprobado' => 0.00,
+            'monto_desembolsado' => 0.00,
+            'descuentos' => 600.00,
+            'saldo_capital' => 0.00,
+            'saldo_interes' => 0.00,
+            'saldo_mora' => 0.00,
+            'interes_anual' => 60.00,
+            'plazo' => 12,
+            'tipo_cuota' => 'flat',
+            'estado' => 'solicitado',
+            'fecha_desembolso' => '2025-04-02',
+            'fecha_primerpago' => '2025-05-02',
+            'fecha_vencimiento' => '2026-04-02',
+            'dias_atraso' => 0,
+            'cuota' => 1600.00,
+            'fecha_ultimopago' => NULL,
+            'numero_renovaciones' => 0,
+            'notas' => NULL,
+            'deleted_at' => NULL,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('creditos')->insert([
+            'agencia_id' => 1,
+            'cliente_id' => 2,
+            'fondo_id' => 2,
+            'empleado_id' => 1,
+            'crelinea_id' => 1,
+            'destino_id' => 1,
+            'codigo' => 'CR-00100000004',
+            'monto_solicitado' => 13000.00,
+            'monto_aprobado' => 0.00,
+            'monto_desembolsado' => 0.00,
+            'descuentos' => 650.00,
+            'saldo_capital' => 0.00,
+            'saldo_interes' => 0.00,
+            'saldo_mora' => 0.00,
+            'interes_anual' => 60.00,
+            'plazo' => 15,
+            'tipo_cuota' => 'flat',
+            'estado' => 'solicitado',
+            'fecha_desembolso' => '2024-04-02',
+            'fecha_primerpago' => '2024-05-02',
+            'fecha_vencimiento' => '2025-07-02',
+            'dias_atraso' => 0,
+            'cuota' => 1516.67,
+            'fecha_ultimopago' => NULL,
+            'numero_renovaciones' => 0,
+            'notas' => NULL,
+            'deleted_at' => NULL,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
