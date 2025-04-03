@@ -70,21 +70,16 @@ class MovimientoResource extends Resource implements HasShieldPermissions
                         ->afterStateUpdated(function ($state, callable $set) {
                             Funciones::cajaActiva($state, $set);
                         })
-                        ->required()
-                        // ->default(fn() => Auth::user()->empleado?->agencia_id ?? 1)
+                        ->required()->default(fn() => Auth::user()->empleado?->agencia_id ?? 1)
                         ->native(false),
                     Forms\Components\Hidden::make('caja_id')
                         ->required(),
-                    Forms\Components\DateTimePicker::make('fecha')
+                    Forms\Components\DatePicker::make('fecha')
                         ->required()
                         ->label('Fecha')
                         ->reactive()
                         ->live(onBlur: true)
-                        // ->afterStateUpdated(function (callable $get, callable $set) {
-                        //     Funciones::calcularInteresAh($get, $set);
-                        // })
                         ->default(now()),
-                    // ->minDate(fn(callable $get) => $get('minfecha')),
                     Forms\Components\TextInput::make('comprobante')
                         ->required(),
                     Select::make('tipo')

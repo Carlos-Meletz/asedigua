@@ -283,7 +283,7 @@ class AhorroResource extends Resource implements HasShieldPermissions
                         realizarPrimerDeposito($record, $data);
                     })
                     ->form([
-                        Forms\Components\DateTimePicker::make('fecha')
+                        Forms\Components\DatePicker::make('fecha')
                             ->readOnly()
                             ->label('Fecha')
                             ->default(now()),
@@ -314,14 +314,6 @@ class AhorroResource extends Resource implements HasShieldPermissions
                     ->visible(fn(Ahorro $ahorro) => $ahorro->nuevo == true)
                     ->icon('heroicon-o-lock-open'),
                 ActionGroup::make([
-                    // Html2MediaAction::make('Contrato')
-                    //     ->content(fn($record) => view('pdf.contrato_ahorro', ['contrato' => $record]))
-                    //     ->icon('heroicon-s-document')
-                    //     ->preview()
-                    //     ->savePdf()
-                    //     ->filename(fn($record) => 'CNT_(' . $record->comprobante . ')-' . $record->cliente->nombre . '.pdf')
-                    //     ->visible(fn($record) => !$record->nuevo)
-                    //     ->authorize(fn() => Gate::allows('contrato_ahorro')),
                     Html2MediaAction::make('EstadoCuenta')
                         ->label('Estado de Cuenta')
                         ->content(fn($record) => view('pdf.est-cuenta_ahorro', ['ahorro' => $record, 'movimientos' => Ahmovimiento::where('ahorro_id', $record->id)->orderBy('fecha', 'asc')->get()]))

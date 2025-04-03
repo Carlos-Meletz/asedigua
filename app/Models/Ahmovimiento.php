@@ -4,7 +4,9 @@ namespace App\Models;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
+use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Validation\ValidationException;
 
 class Ahmovimiento extends Model
 {
@@ -14,8 +16,28 @@ class Ahmovimiento extends Model
         parent::boot();
 
         static::creating(function ($model) {
+            $model->monto = $model->deposito - $model->retiro - $model->penalizacion;
             $cuenta = Ahorro::find($model->ahorro_id);
             if ($cuenta && !$cuenta->nuevo) {
+                $existe = Ahmovimiento::where('comprobante', $model->comprobante)
+                    ->where('agencia_id', $model->agencia_id)
+                    ->exists() ||
+                    Crmovimiento::where('comprobante', $model->comprobante)
+                    ->where('agencia_id', $model->agencia_id)
+                    ->exists() ||
+                    Movimiento::where('comprobante', $model->comprobante)
+                    ->where('agencia_id', $model->agencia_id)
+                    ->exists();
+                if ($existe) {
+                    Notification::make()
+                        ->title('Comprobante Operado!')
+                        ->warning()
+                        ->body("El comprobante: {$model->comprobante} ya esta registrado.")
+                        ->send();
+                    throw ValidationException::withMessages([
+                        'comprobante' => 'El número de comprobante ya ha sido registrado en esta agencia.',
+                    ]);
+                }
                 $cuenta->saldo = $model->saldo;
                 $cuenta->interes_acumulado = $cuenta->interes_acumulado + $model->interes_acumulado;
                 $cuenta->save();
@@ -38,7 +60,6 @@ class Ahmovimiento extends Model
                 $cuenta->interes_acumulado += $model->interes_acumulado;
                 $cuenta->save();
             }
-            $model->monto = $model->deposito - $model->retiro - $model->penalizacion;
         });
         static::deleting(function ($model) {
             $model->actualizado_por = Auth::id();
@@ -46,7 +67,6 @@ class Ahmovimiento extends Model
             $movimientosRestantes = Ahmovimiento::where('ahorro_id', $model->ahorro_id)->withoutTrashed()->count();
             if ($cuenta) {
                 if ($movimientosRestantes == 1) { // Porque aún no se ha eliminado el actual
-                    // $cuenta->estado = 'inactiva';
                     $cuenta->nuevo = true;
                 }
                 $cuenta->saldo = $cuenta->saldo - $model->deposito + $model->retiro + $model->penalizacion;

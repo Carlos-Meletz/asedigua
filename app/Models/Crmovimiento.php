@@ -21,7 +21,13 @@ class Crmovimiento extends Model
             $model->actualizado_por = Auth::id();
             $credito = Credito::find($model->credito_id);
             if (!$model->desembolso) {
-                $existe = Crmovimiento::where('comprobante', $model->comprobante)
+                $existe = Ahmovimiento::where('comprobante', $model->comprobante)
+                    ->where('agencia_id', $model->agencia_id)
+                    ->exists() ||
+                    Crmovimiento::where('comprobante', $model->comprobante)
+                    ->where('agencia_id', $model->agencia_id)
+                    ->exists() ||
+                    Movimiento::where('comprobante', $model->comprobante)
                     ->where('agencia_id', $model->agencia_id)
                     ->exists();
 

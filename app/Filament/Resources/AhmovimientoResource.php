@@ -98,7 +98,7 @@ class AhmovimientoResource extends Resource implements HasShieldPermissions
                             Funciones::cajaActiva($state, $set);
                         })
                         ->required()
-                        // ->default(fn() => Auth::user()->empleado?->agencia_id ?? 1)
+                        ->default(fn() => Auth::user()->empleado?->agencia_id ?? 1)
                         ->native(false),
                     Forms\Components\DateTimePicker::make('fecha')
                         ->required()
@@ -256,7 +256,7 @@ class AhmovimientoResource extends Resource implements HasShieldPermissions
                     ->default(true)
                     ->queries(
                         true: fn($query) => $query->whereHas('caja', fn($q) => $q->where('abierta', true)),
-                        false: fn($query) => $query, // Muestra todos los movimientos si está en "No"
+                        false: fn($query) => $query,
                     ),
             ])
             ->actions([
@@ -277,8 +277,7 @@ class AhmovimientoResource extends Resource implements HasShieldPermissions
                             $cuenta = Ahorro::find($record->ahorro_id);
                             $movimientosRestantes = Ahmovimiento::where('ahorro_id', $record->ahorro_id)->whereNull('deleted_at')->count();
                             if ($cuenta) {
-                                if ($movimientosRestantes == 1) { // Porque aún no se ha eliminado el actual
-                                    // $cuenta->estado = 'inactiva';
+                                if ($movimientosRestantes == 1) {
                                     $cuenta->nuevo = true;
                                 }
                                 $cuenta->saldo = $cuenta->saldo - $record->deposito + $record->retiro + $record->penalizacion;
