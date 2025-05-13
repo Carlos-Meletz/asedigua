@@ -221,9 +221,17 @@ class Funciones
 
         $cajaActiva = Caja::where('agencia_id', $record->agencia_id)->where('abierta', true)->first();
         $creditos = Credito::where('cliente_id', $record->cliente_id)->whereIn('estado', ['desembolsado', 'pagado', 'vencido'])->get();
+        // $existe = Crmovimiento::where('comprobante', $data['comprobante'])
+        //     ->where('agencia_id', $record->agencia_id)
+        //     ->exists();
+
         $existe = Crmovimiento::where('comprobante', $data['comprobante'])
             ->where('agencia_id', $record->agencia_id)
+            ->where('egreso', '>', 0)
             ->exists();
+
+
+
 
         if ($existe) {
             Notification::make()
@@ -284,28 +292,14 @@ class Funciones
         }
     }
 
-    public static function calcularpago($record)
+    public static function calcularpago($state, $fecha)
     {
-        $credito = Credito::find($record);
-        // dump($credito);
+        $credito = Credito::find($state);
         if ($credito) {
-
-            // //MOSTRAR DATOS DEL CREDITO
-            // $set('desembolsos', $credito->monto_desembolsado);
-            // $set('entrega', $credito->fecha_desembolso);
-            // $set('vencimiento', $credito->fecha_vencimiento);
-            // $set('plazo', $credito->plazo);
-            // $set('cuota', $credito->cuota);
-            // $set('ultimopago', $credito->fecha_ultimopago);
-            // $set('atraso', $credito->atraso);
-            // $set('saldoCapital', $credito->saldo_capital);
-            // $set('saldoInteres', $credito->saldo_interes);
-            // $set('saldoMora', $credito->saldo_mora);
-            // $set('ciclos', $credito->numero_renovaciones);
 
             $fechaDesembolso = Carbon::parse($credito->fecha_desembolso);
             $fecha_ultimo_pago = Carbon::parse($credito->fecha_ultimopago);
-            $fechaActual = Carbon::parse(now());
+            $fechaActual = Carbon::parse($fecha);
             $plazo = $credito->plazo;
             $montoTotal = $credito->monto_desembolsado;
             $tasaInteresAnual = $credito->crelinea->tasa_interes;
@@ -337,6 +331,9 @@ class Funciones
                     $capital_mes = $cuotaMensual - $interes_mes;
                     $capital_acumulado += $capital_mes;
                     if ($i > $meses_pagados) {
+                        if ($capital_acumulado > $montoTotal) {
+                            $capital_acumulado = $montoTotal;
+                        }
                         $capital_vencido = $capital_acumulado - $capitalpagado;
                     }
                     $saldo -= $capital_mes;
@@ -376,6 +373,9 @@ class Funciones
                     $capital_mes = $cuotaMensual - $interes_mes;
                     $capital_acumulado += $capital_mes;
                     if ($i > $meses_pagados) {
+                        if ($capital_acumulado > $montoTotal) {
+                            $capital_acumulado = $montoTotal;
+                        }
                         $capital_vencido = $capital_acumulado - $capitalpagado;
                     }
                     $saldo -= $capital_mes;
@@ -394,10 +394,7 @@ class Funciones
                 $fechaProximoVencimiento = Carbon::parse($credito->fecha_vencimiento)->format('Y-m-d');
                 $dias_transcurridos = intval($fecha_ultimo_pago->diffInDays($fechaActual));
 
-                $saldo = $montoTotal;
                 $capital_vencido = 0;
-                $capital_acumulado = 0;
-                $capital_mes = 0;
                 $capitalpagado = Crmovimiento::where('credito_id', $credito->id)->whereNull('deleted_at')->sum('capital');
                 if ($fechaProximoVencimiento > $fechaActual) {
                     $diasAtraso = 0;
@@ -439,9 +436,12 @@ class Funciones
 
                 for ($i = 1; $i <= $meses_transcurridos; $i++) {
                     $interes_mes = $montoTotal * $tasaInteresMensual;
-                    $capital_mes = $cuotaMensual - ($montoTotal * $tasaInteresMensual);
+                    $capital_mes = $cuotaMensual - ($interes_mes);
                     $capital_acumulado += $capital_mes;
                     if ($i > $meses_pagados) {
+                        if ($capital_acumulado > $montoTotal) {
+                            $capital_acumulado = $montoTotal;
+                        }
                         $capital_vencido = $capital_acumulado - $capitalpagado;
                     }
                     $saldo -= $capital_mes;
@@ -449,23 +449,23 @@ class Funciones
                 $interes_apagar = $montoTotal * $tasaInteresMensual;
                 $capital_vencido = max(0, $capital_vencido);
                 $mora = 0;
-                $pago_sugerido = $interes_apagar;
+
+                $pago_sugerido = $interes_apagar + $capital_vencido;
                 if ($diasAtraso > 0) {
+                    $interes_apagar = $montoTotal * $tasaInteresMensual * ($meses_transcurridos - $meses_pagados);
                     $tasaMoraDiario = $credito->crelinea->tasa_mora / 365 / 100;
                     $mora = ($capital_vencido * $tasaMoraDiario) * $diasAtraso;
                     $pago_sugerido = $capital_vencido + $interes_apagar + $mora;
                 }
             }
-
-            $calculo[] = [
+            return [
                 'capital' => number_format($capital_vencido, 2, '.', ''),
                 'interes' => number_format($interes_apagar, 2, '.', ''),
                 'mora' => number_format($mora, 2, '.', ''),
                 'atraso' => $diasAtraso,
                 'total' => number_format($credito->saldo_capital + $interes_apagar + $mora, 2, '.', ''),
-                'pago' => number_format($pago_sugerido, 2, '.', ''),
+                'ingreso' => number_format($pago_sugerido, 2, '.', ''),
             ];
-            return $calculo;
         }
     }
 }

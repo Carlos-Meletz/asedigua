@@ -10,7 +10,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Credito extends Model
 {
     use SoftDeletes;
-
+    protected static function booted()
+    {
+        static::deleting(function ($credito) {
+            // Esto también hace soft delete de los movimientos relacionados
+            $credito->crmovimientos()->delete();
+        });
+    }
     protected $fillable = [
         'agencia_id',
         'cliente_id',

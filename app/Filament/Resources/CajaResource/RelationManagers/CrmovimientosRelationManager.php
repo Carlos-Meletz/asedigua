@@ -38,11 +38,11 @@ class CrmovimientosRelationManager extends RelationManager
                     ->sortable(),
                 Tables\Columns\TextColumn::make('comprobante')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('pago')
+                Tables\Columns\TextColumn::make('ingreso')
                     ->numeric()
                     ->money('GTQ')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('desembolso')
+                Tables\Columns\TextColumn::make('egreso')
                     ->numeric()
                     ->money('GTQ')
                     ->sortable(),

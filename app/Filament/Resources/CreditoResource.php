@@ -82,7 +82,7 @@ class CreditoResource extends Resource implements HasShieldPermissions
                         ->searchable()
                         ->optionsLimit(5)
                         ->preload()
-                        ->reactive()
+                        // ->reactive()
                         ->live(onBlur: true)
                         ->columnSpan(2)
                         ->native(false),
@@ -93,7 +93,7 @@ class CreditoResource extends Resource implements HasShieldPermissions
                         ->optionsLimit(5)
                         ->preload()
                         ->native(false)
-                        ->reactive()
+                        // ->reactive()
                         ->live(onBlur: true)
                         ->afterStateUpdated(function ($state, $set) {
                             $set('codigo', sprintf('CR-%03d%08d', $state, (Credito::max('id') ?? 0) + 1));
@@ -183,7 +183,7 @@ class CreditoResource extends Resource implements HasShieldPermissions
                         ->optionsLimit(5)
                         ->preload()
                         ->required()
-                        ->reactive()
+                        // ->reactive()
                         ->live(onBlur: true)
                         ->native(false),
 
@@ -191,7 +191,7 @@ class CreditoResource extends Resource implements HasShieldPermissions
                         ->label('Monto Solicitado')
                         ->numeric()
                         ->prefix('Q')
-                        ->reactive()
+                        // ->reactive()
                         ->live(onBlur: true)
                         ->default(0)
                         ->rule(fn(callable $get) => "between:{$get('monto_min')},{$get('monto_max')}")
@@ -237,7 +237,7 @@ class CreditoResource extends Resource implements HasShieldPermissions
                         ])
                         ->default('flat')
                         ->required()
-                        ->reactive()
+                        // ->reactive()
                         ->live(onBlur: true)
                         ->native(false),
 
@@ -245,8 +245,8 @@ class CreditoResource extends Resource implements HasShieldPermissions
                         ->label('Cuota')
                         ->numeric()
                         ->prefix('Q')
-                        ->required()
-                        ->readOnly(),
+                        ->required(),
+                    // ->readOnly(),
 
                     DatePicker::make('fecha_desembolso')->label('Fecha')
                         ->default(now())
@@ -283,42 +283,42 @@ class CreditoResource extends Resource implements HasShieldPermissions
                         ->required()
                         ->inline()
                         ->visibleOn('edit'),
-                    Actions::make([
-                        Actions\Action::make('generar_plan')
-                            ->label('Ver Plan')
-                            ->action(fn(callable $get, callable $set) => $set('plan_pagos', Funciones::generarPlanPagos([
-                                'monto_solicitado' => $get('monto_solicitado'),
-                                'interes_anual' => $get('interes_anual'),
-                                'plazo' => $get('plazo'),
-                                'tipo_cuota' => $get('tipo_cuota'),
-                                'fecha_desembolso' => $get('fecha_desembolso'),
-                            ], $set)))
-                            ->color('primary')
-                            ->icon('heroicon-o-document-text'),
-                    ]),
+                    // Actions::make([
+                    //     Actions\Action::make('generar_plan')
+                    //         ->label('Ver Plan')
+                    //         ->action(fn(callable $get, callable $set) => $set('plan_pagos', Funciones::generarPlanPagos([
+                    //             'monto_solicitado' => $get('monto_solicitado'),
+                    //             'interes_anual' => $get('interes_anual'),
+                    //             'plazo' => $get('plazo'),
+                    //             'tipo_cuota' => $get('tipo_cuota'),
+                    //             'fecha_desembolso' => $get('fecha_desembolso'),
+                    //         ], $set)))
+                    //         ->color('primary')
+                    //         ->icon('heroicon-o-document-text'),
+                    // ]),
                     Textarea::make('notas')
                         ->label('Notas')
                         ->columnSpanFull(),
-                    TableRepeater::make('plan_pagos')
-                        ->label('Plan de Pagos')
-                        ->schema([
-                            TextInput::make('nocuota')->label('No.')->readOnly()->extraAttributes(['class' => 'h-8']),
-                            DatePicker::make('fecha')->label('Fecha')->native(false)->readOnly()->extraAttributes(['class' => 'h-8']),
-                            TextInput::make('cuota')->label('Cuota')->prefix('Q')->readOnly()->extraAttributes(['class' => 'h-8']),
-                            TextInput::make('interes')->label('Interés')->prefix('Q')->readOnly()->extraAttributes(['class' => 'h-8']),
-                            TextInput::make('capital')->label('Capital')->prefix('Q')->readOnly()->extraAttributes(['class' => 'h-8']),
-                            TextInput::make('saldo')->label('Saldo')->prefix('Q')->readOnly()->extraAttributes(['class' => 'h-8']),
-                        ])
-                        ->reorderable(false)
-                        ->cloneable(false)
-                        ->collapsible()
-                        ->defaultItems(0)
-                        ->addable(false)
-                        ->deletable(false)
-                        ->reactive()
-                        ->live(onBlur: true)
-                        ->hidden(fn(callable $get) => empty($get('plan_pagos')))
-                        ->columnSpan('full'),
+                    // TableRepeater::make('plan_pagos')
+                    //     ->label('Plan de Pagos')
+                    //     ->schema([
+                    //         TextInput::make('nocuota')->label('No.')->readOnly()->extraAttributes(['class' => 'h-8']),
+                    //         DatePicker::make('fecha')->label('Fecha')->native(false)->readOnly()->extraAttributes(['class' => 'h-8']),
+                    //         TextInput::make('cuota')->label('Cuota')->prefix('Q')->readOnly()->extraAttributes(['class' => 'h-8']),
+                    //         TextInput::make('interes')->label('Interés')->prefix('Q')->readOnly()->extraAttributes(['class' => 'h-8']),
+                    //         TextInput::make('capital')->label('Capital')->prefix('Q')->readOnly()->extraAttributes(['class' => 'h-8']),
+                    //         TextInput::make('saldo')->label('Saldo')->prefix('Q')->readOnly()->extraAttributes(['class' => 'h-8']),
+                    //     ])
+                    //     ->reorderable(false)
+                    //     ->cloneable(false)
+                    //     ->collapsible()
+                    //     ->defaultItems(0)
+                    //     ->addable(false)
+                    //     ->deletable(false)
+                    //     ->reactive()
+                    //     // ->live(onBlur: true)
+                    //     ->hidden(fn(callable $get) => empty($get('plan_pagos')))
+                    //     ->columnSpan('full'),
                 ])
                     ->columns(4)->visible(fn($get) => !empty($get('cliente_id'))),
             ]);
@@ -334,6 +334,7 @@ class CreditoResource extends Resource implements HasShieldPermissions
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('cliente.nombre_completo')
                     ->numeric()
+                    ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('fondo.nombre')
                     ->numeric()
@@ -478,7 +479,7 @@ class CreditoResource extends Resource implements HasShieldPermissions
                     ]),
                 Tables\Filters\TrashedFilter::make(),
 
-            ], layout: FiltersLayout::AboveContent)
+            ], layout: FiltersLayout::AboveContentCollapsible)
             ->headerActions([
                 ExportAction::make()->exporter(CreditoExporter::class)->formats([
                     ExportFormat::Xlsx,
@@ -589,7 +590,7 @@ class CreditoResource extends Resource implements HasShieldPermissions
                                     ->required()
                                     ->afterStateUpdated(function (callable $set, callable $get) {
                                         Funciones::calcularDescuento($get, $set);
-                                        Funciones::calcularCuota($get, $set);
+                                        // Funciones::calcularCuota($get, $set);
                                     }),
 
                                 TextInput::make('descuentos')

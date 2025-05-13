@@ -25,6 +25,8 @@ class ViewCrmovimiento extends ViewRecord
                 ->margin([0.3, 0.5, 0.3, 0.5])
                 ->filename(fn($record) => 'CPR-' . $record->comprobante . '.pdf')
                 ->authorize(fn($record) => Gate::allows('comprobante_crmovimiento') || Carbon::parse($record->created_at)->diffInMinutes(now()) <= 10),
+            Actions\EditAction::make(),
+
         ];
     }
 }

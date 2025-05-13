@@ -13,7 +13,8 @@ $totalOtros = 0;
     <hr>
     <div class="grid grid-flow-col grid-rows-4 gap-4">
         <div class="col-span-2">
-            <p class="font-medium text-gray-700">Cliente: <span class="font-normal">{{ $credito->cliente->nombre
+            <p class="font-medium text-gray-700">Cliente: <span class="font-normal">{{
+                    $credito->cliente->nombre_completo
                     }}</span></p>
             <p class="font-medium text-gray-700">Número de Crédito: <span class="font-normal">{{
                     $credito->codigo }}</span></p>
@@ -67,7 +68,7 @@ $totalOtros = 0;
                     <td class="p-1 text-left">{{ Carbon::parse($movimiento->fecha)->format('d/m/Y') }}</td>
                     <td class="p-1 text-left">{{ $movimiento->comprobante }}</td>
                     <td class="p-1 text-left">{{ $movimiento->atraso }}</td>
-                    <td class="p-1 text-left">Q {{ number_format($movimiento->pago, 2) }}</td>
+                    <td class="p-1 text-left">Q {{ number_format($movimiento->ingreso, 2) }}</td>
                     <td class="p-1 text-left">Q {{ number_format($movimiento->capital, 2) }}</td>
                     <td class="p-1 text-left">Q {{ number_format($movimiento->interes, 2) }}</td>
                     <td class="p-1 text-left">Q {{ number_format($movimiento->mora, 2) }}</td>
@@ -75,7 +76,7 @@ $totalOtros = 0;
                     <td class="p-1 text-left">Q {{ number_format($movimiento->saldocap, 2) }}</td>
                 </tr>
                 @php
-                $totalPago = $totalPago + $movimiento->pago;
+                $totalPago = $totalPago + $movimiento->ingreso;
                 $totalCapital = $totalCapital + $movimiento->capital;
                 $totalInteres = $totalInteres + $movimiento->interes;
                 $totalMora = $totalMora + $movimiento->mora;

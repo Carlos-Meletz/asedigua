@@ -68,7 +68,7 @@ class CrmovimientoResource extends Resource implements HasShieldPermissions
                     ->schema([
                         Forms\Components\Select::make('credito_id')
                             ->required()
-                            ->relationship('credito', 'id', fn(Builder $query) => $query->whereIn('estado', ['desembolsado', 'vencido'])->with('cliente'))
+                            ->relationship('credito', 'id', fn(Builder $query) => $query->whereIn('estado', ['desembolsado', 'vencido', 'atrasado'])->with('cliente'))
                             ->getOptionLabelFromRecordUsing(fn($record) => $record->cliente->nombre_completo . ' | ' . $record->codigo)
                             ->searchable()
                             ->reactive()
@@ -185,7 +185,7 @@ class CrmovimientoResource extends Resource implements HasShieldPermissions
                                     Forms\Components\TextInput::make('interes')
                                         ->required()
                                         ->numeric()
-                                        ->readOnly()
+                                        // ->readOnly()
                                         ->prefix('Q')
                                         ->default(fn($record) => ($record) ? $record->interes : 0),
                                     Forms\Components\TextInput::make('descint')
@@ -199,7 +199,7 @@ class CrmovimientoResource extends Resource implements HasShieldPermissions
                                 Group::make([
                                     Forms\Components\TextInput::make('mora')
                                         ->required()
-                                        ->readOnly()
+                                        // ->readOnly()
                                         ->numeric()
                                         ->prefix('Q')
                                         ->default(fn($record) => ($record) ? $record->mora : 0),
@@ -261,7 +261,10 @@ class CrmovimientoResource extends Resource implements HasShieldPermissions
                     ->date('d/m/Y')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('agencia.nombre')
-                    ->numeric()
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('credito.cliente.nombre_completo')
+                    ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('credito.codigo')
                     ->numeric()
