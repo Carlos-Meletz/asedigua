@@ -35,10 +35,6 @@ class Pruebas extends Page implements HasForms
     {
         $this->form->fill();
     }
-    public function getPlanPagosProperty()
-    {
-        return $this->planPagos;
-    }
 
     protected function getFormSchema(): array
     {
@@ -105,16 +101,20 @@ class Pruebas extends Page implements HasForms
         $tasaMensual = ($tasaAnual / 100) / 12;
         $tasaDiaria = ($tasaAnual / 100) / 365; // Para cálculo de interés diario (360 días año comercial)
         $this->planPagos = [];
+        $diasAdicionales = 0;
 
-        // Diferencia de días entre desembolso y primer pago
+        // Fecha esperada para un mes exacto
+        $fechaUnMesDespues = $fecha->copy()->addMonth();
+
+        // Calcular la diferencia real de días
         $diasDiferencia = $fecha->diffInDays($fechaPrimerPago);
 
-        // Calcular interés extra si la diferencia es más de 30 días
-        $interesExtra = 0;
-        if ($diasDiferencia > 30) {
-            $diasAdicionales = $diasDiferencia - 30;
-            $interesExtra = $saldo * $tasaDiaria * $diasAdicionales;
-        }
+        // Calcular días adicionales (más allá de 1 mes exacto)
+        $diasAdicionales = $fechaPrimerPago->gt($fechaUnMesDespues)
+            ? $fechaUnMesDespues->diffInDays($fechaPrimerPago)
+            : 0;
+        $interesExtra = $saldo * $tasaDiaria * $diasAdicionales;
+
 
         for ($i = 1; $i <= $plazo; $i++) {
             if ($this->tipo === 'frances') {

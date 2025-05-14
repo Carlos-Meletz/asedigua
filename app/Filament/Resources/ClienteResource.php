@@ -17,14 +17,15 @@ use Illuminate\Support\Collection;
 use Filament\Forms\Components\Wizard;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Repeater;
+use Filament\Tables\Actions\ActionGroup;
 use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Resources\ClienteResource\Pages;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Resources\ClienteResource\RelationManagers;
-use App\Filament\Resources\ClienteResource\RelationManagers\ReferenciasRelationManager;
+use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use App\Filament\Resources\ClienteResource\RelationManagers\TrabajosRelationManager;
 use App\Filament\Resources\ClienteResource\RelationManagers\ViviendasRelationManager;
-use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
+use App\Filament\Resources\ClienteResource\RelationManagers\ReferenciasRelationManager;
 
 class ClienteResource extends Resource implements HasShieldPermissions
 {
@@ -271,6 +272,10 @@ class ClienteResource extends Resource implements HasShieldPermissions
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('id')
+                    ->label('No. Cliente')
+                    ->sortable()
+                    ->formatStateUsing(fn($state) => str_pad($state, 7, '0', STR_PAD_LEFT)),
                 Tables\Columns\TextColumn::make('nombre_completo')
                     ->searchable()
                     ->sortable(),
@@ -305,7 +310,8 @@ class ClienteResource extends Resource implements HasShieldPermissions
                 Tables\Columns\ImageColumn::make('fotografia')
                     ->label('Foto')
                     ->disk('cliente')
-                    ->circular(),
+                    ->circular()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('telefono')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('celular')
@@ -334,13 +340,15 @@ class ClienteResource extends Resource implements HasShieldPermissions
                         'inactivo' => 'warning',
                         'suspendido' => 'gray',
                         'bloqueado' => 'danger',
-                    }),
+                    })
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\ImageColumn::make('archivos')
                     ->disk('archivo')
                     ->circular()
                     ->stacked()
                     ->limit(3)
-                    ->limitedRemainingText(),
+                    ->limitedRemainingText()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -349,14 +357,16 @@ class ClienteResource extends Resource implements HasShieldPermissions
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-            ])
+            ])->defaultSort('created_at', 'desc')
             ->filters([
                 //
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                ActionGroup::make([
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make(),
+                ])
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

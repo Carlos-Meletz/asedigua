@@ -320,7 +320,8 @@ class CreditoResource extends Resource implements HasShieldPermissions
                     //     ->hidden(fn(callable $get) => empty($get('plan_pagos')))
                     //     ->columnSpan('full'),
                 ])
-                    ->columns(4)->visible(fn($get) => !empty($get('cliente_id'))),
+                    ->columns(4)
+                    ->visible(fn($get) => !empty($get('cliente_id'))),
             ]);
     }
 
@@ -328,9 +329,12 @@ class CreditoResource extends Resource implements HasShieldPermissions
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('cliente.id')
+                    ->label('No.Cliente')
+                    ->sortable()
+                    ->formatStateUsing(fn($state) => str_pad($state, 7, '0', STR_PAD_LEFT)),
                 Tables\Columns\TextColumn::make('agencia.nombre')
                     ->numeric()
-                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('cliente.nombre_completo')
                     ->numeric()
@@ -338,31 +342,30 @@ class CreditoResource extends Resource implements HasShieldPermissions
                     ->sortable(),
                 Tables\Columns\TextColumn::make('fondo.nombre')
                     ->numeric()
-                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('destino.nombre')
                     ->numeric()
                     ->sortable()
+                    ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('crelinea.nombre')
                     ->numeric()
+                    ->searchable()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('codigo')
-                    ->searchable(),
+                    ->label('No. Crédito')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('monto')
                     ->getStateUsing(fn($record) => match ($record->estado) {
                         'solicitado' => $record->monto_solicitado,
                         'desembolsado' => $record->monto_desembolsado,
                         default => $record->monto_desembolsado,
                     })
-                    ->numeric()
-                    ->money('GTQ')
-                    ->sortable(),
+                    ->money('GTQ'),
                 Tables\Columns\TextColumn::make('descuentos')
-                    ->numeric()
                     ->money('GTQ')
-                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('interes_anual')
                     ->numeric()
@@ -386,8 +389,10 @@ class CreditoResource extends Resource implements HasShieldPermissions
                         'vencidomora' => 'info',
                         'pagado' => 'primary',
                         'vencido' => 'Red',
-                    }),
+                    })
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('fecha_desembolso')
+                    ->label('Fecha')
                     ->date()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('fecha_primerpago')
@@ -400,7 +405,6 @@ class CreditoResource extends Resource implements HasShieldPermissions
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('dias_atraso')
                     ->numeric()
-                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('fecha_ultimopago')
                     ->date()
@@ -418,7 +422,7 @@ class CreditoResource extends Resource implements HasShieldPermissions
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-            ])->defaultSort('estado', 'asc')
+            ])->defaultSort('created_at', 'desc')
             ->filters([
                 Filter::make('fecha_desembolso')
                     ->form([
@@ -446,8 +450,7 @@ class CreditoResource extends Resource implements HasShieldPermissions
                     )
                     ->getOptionLabelFromRecordUsing(fn($record) => $record->cliente->nombre_completo)
                     ->searchable()
-                    ->preload(), // Carga los datos automáticamente
-
+                    ->preload(),
                 SelectFilter::make('agencia_id')
                     ->label('Agencia')
                     ->relationship('agencia', 'nombre')
@@ -464,8 +467,6 @@ class CreditoResource extends Resource implements HasShieldPermissions
                     ->relationship('crelinea', 'nombre', fn(Builder $query) => $query->where('activo', true))
                     ->searchable()
                     ->preload(),
-
-                // Otros filtros personalizados
                 SelectFilter::make('estado')
                     ->label('Estado del Crédito')
                     ->options([
@@ -675,13 +676,13 @@ class CreditoResource extends Resource implements HasShieldPermissions
                     ->color('success')
                     ->requiresConfirmation(),
                 ActionGroup::make([
-                    Tables\Actions\ViewAction::make(),
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\DeleteAction::make(),
                     Html2MediaAction::make('plan')
                         ->label('Plan')
                         ->content(fn($record) => view('pdf.plan_pagos', ['credito' => $record, 'plan' => Funciones::generarPlanPagos([
-                            'monto_solicitado' => $record->monto_solicitado,
+                            'monto_solicitado' => match ($record->estado) {
+                                'solicitado' => $record->monto_solicitado,
+                                default => $record->monto_desembolsado,
+                            },
                             'interes_anual' => $record->interes_anual,
                             'plazo' => $record->plazo,
                             'tipo_cuota' => $record->tipo_cuota,
@@ -693,8 +694,10 @@ class CreditoResource extends Resource implements HasShieldPermissions
                         ->filename(fn($record) => 'Plan_' . $record->codigo . '.pdf')
                         ->format('letter', 'in')
                         ->margin([0.3, 0.5, 0.3, 0.5])
-                        ->authorize(fn() => Gate::allows('planPagos_credito'))
-                        ->visible(fn($record) => in_array($record->estado, ['solicitado', 'desembolsado', 'vencido', 'pagado'])),
+                        ->authorize(fn() => Gate::allows('planPagos_credito')),
+                    // ->visible(fn($record) => in_array($record->estado, ['solicitado', 'desembolsado', 'vencido', 'pagado'])),
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make(),
                     Tables\Actions\Action::make('rechazar')
                         ->label('Rechazar')
                         ->icon('heroicon-s-x-circle')
@@ -715,6 +718,7 @@ class CreditoResource extends Resource implements HasShieldPermissions
                         ->visible(fn(Credito $credito) => in_array($credito->estado, ['solicitado']))
                         ->authorize(fn() => Gate::allows('rechazar_credito'))
                         ->requiresConfirmation(),
+                    Tables\Actions\DeleteAction::make(),
                 ]),
             ])
             ->bulkActions([

@@ -10,6 +10,7 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -110,7 +111,7 @@ class CrelineaResource extends Resource
                     ->suffix('% Anual'),
                 Tables\Columns\TextColumn::make('tasa_mora')
                     ->numeric()
-                    ->suffix('% Mensual'),
+                    ->suffix('% Anual'),
                 Tables\Columns\TextColumn::make('plazo_min')
                     ->numeric()
                     ->sortable()->toggleable(isToggledHiddenByDefault: true),
@@ -118,11 +119,9 @@ class CrelineaResource extends Resource
                     ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('monto_min')
-                    ->numeric()
                     ->money('GTQ')
                     ->sortable()->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('monto_max')
-                    ->numeric()
                     ->money('GTQ')
                     ->sortable(),
                 Tables\Columns\IconColumn::make('activo')
@@ -150,9 +149,11 @@ class CrelineaResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                ActionGroup::make([
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make(),
+                ])
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

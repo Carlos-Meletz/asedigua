@@ -10,7 +10,10 @@ use Carbon\Carbon;
     <div class="grid grid-cols-2 mt-2 text-xs text-gray-700">
         <p><strong>Número de Crédito:</strong> {{ $credito->codigo }}</p>
         <p><strong>Cliente:</strong> {{ $credito->cliente->nombre_completo }}</p>
-        <p><strong>Monto:</strong> Q{{ number_format($credito->monto_solicitado, 2) }}</p>
+        <p><strong>Monto:</strong> Q{{ number_format(match ($credito->estado) {
+            'solicitado' => $credito->monto_solicitado,
+            default => $credito->monto_desembolsado,
+            }, 2) }}</p>
         <p><strong>Interés Anual:</strong> {{ $credito->interes_anual }}%</p>
         <p><strong>Plazo:</strong> {{ $credito->plazo }} meses</p>
         <p><strong>Fecha de Desembolso:</strong> {{ Carbon::parse($credito->fecha_desembolso)->format('d/m/Y') }}</p>
@@ -29,16 +32,29 @@ use Carbon\Carbon;
                 </tr>
             </thead>
             <tbody>
-                @foreach($plan as $pago)
+                @foreach($plan as $index => $pago)
                 <tr class="text-xs text-center odd:bg-white even:bg-gray-100">
                     <td class="px-2 py-1 border border-gray-300">{{ $pago['nocuota'] }}</td>
-                    <td class="px-2 py-1 border border-gray-300">{{ Carbon::parse($pago['fecha'])->format('d/m/Y') }}
-                    </td>
+                    <td class="px-2 py-1 border border-gray-300">{{
+                        \Carbon\Carbon::parse($pago['fecha'])->format('d/m/Y') }}</td>
                     <td class="px-2 py-1 border border-gray-300">Q {{ number_format($pago['cuota'], 2) }}</td>
                     <td class="px-2 py-1 border border-gray-300">Q {{ number_format($pago['interes'], 2) }}</td>
                     <td class="px-2 py-1 border border-gray-300">Q {{ number_format($pago['capital'], 2) }}</td>
                     <td class="px-2 py-1 border border-gray-300">Q {{ number_format($pago['saldo'], 2) }}</td>
                 </tr>
+
+                @php
+                $nroCuota = $pago['nocuota'];
+                @endphp
+
+                @if ($nroCuota == 27 || ($nroCuota > 27 && ($nroCuota - 27) % 39 == 0))
+                <tr>
+                    <td colspan="6" class="h-6"></td>
+                </tr> <!-- Espacio visual opcional -->
+                <tr class="page-break">
+                    <td colspan="6"></td>
+                </tr> <!-- Salto de página -->
+                @endif
                 @endforeach
             </tbody>
             <tfoot>

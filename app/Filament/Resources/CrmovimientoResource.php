@@ -261,6 +261,7 @@ class CrmovimientoResource extends Resource implements HasShieldPermissions
                     ->date('d/m/Y')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('agencia.nombre')
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('credito.cliente.nombre_completo')
@@ -268,44 +269,43 @@ class CrmovimientoResource extends Resource implements HasShieldPermissions
                     ->sortable(),
                 Tables\Columns\TextColumn::make('credito.codigo')
                     ->numeric()
+                    ->searchable()
+                    ->label('No. Crédito')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('comprobante')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('tipo'),
+                    ->searchable()
+                    ->label('No. CPR')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('tipo')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('ingreso')
-                    ->numeric()
                     ->money('GTQ')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('capital')
-                    ->numeric()
                     ->money('GTQ')
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
                 Tables\Columns\TextColumn::make('interes')
-                    ->numeric()
                     ->money('GTQ')
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
                 Tables\Columns\TextColumn::make('descint')
-                    ->numeric()
                     ->money('GTQ')
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
                 Tables\Columns\TextColumn::make('mora')
-                    ->numeric()
                     ->money('GTQ')
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
                 Tables\Columns\TextColumn::make('descmora')
-                    ->numeric()
                     ->money('GTQ')
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
                 Tables\Columns\TextColumn::make('egreso')
-                    ->numeric()
                     ->money('GTQ')
                     ->sortable(),
                 Tables\Columns\IconColumn::make('anulado')
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->boolean(),
                 Tables\Columns\TextColumn::make('deleted_at')
                     ->dateTime()
@@ -338,18 +338,17 @@ class CrmovimientoResource extends Resource implements HasShieldPermissions
                 ])
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
+                Html2MediaAction::make('Cpr')
+                    ->content(fn($record) => view('pdf.comprobante_credito', ['movimiento' => $record]))
+                    ->icon('heroicon-s-printer')
+                    ->preview()
+                    ->savePdf()
+                    ->format('letter', 'in')
+                    ->margin([0, 0.5, 0.3, 0.5])
+                    ->filename(fn($record) => 'CPR-' . $record->comprobante . '.pdf')
+                    ->authorize(fn($record) => Gate::allows('comprobante_crmovimiento') || Carbon::parse($record->created_at)->diffInMinutes(now()) <= 10),
                 ActionGroup::make([
-                    Tables\Actions\DeleteAction::make(),
-                    Html2MediaAction::make('Cpr')
-                        ->content(fn($record) => view('pdf.comprobante_credito', ['movimiento' => $record]))
-                        ->icon('heroicon-s-printer')
-                        ->preview()
-                        ->savePdf()
-                        ->format('letter', 'in')
-                        ->margin([0, 0.5, 0.3, 0.5])
-                        ->filename(fn($record) => 'CPR-' . $record->comprobante . '.pdf')
-                        ->authorize(fn($record) => Gate::allows('comprobante_crmovimiento') || Carbon::parse($record->created_at)->diffInMinutes(now()) <= 10),
+                    Tables\Actions\ViewAction::make(),
                     Tables\Actions\Action::make('anular')
                         ->label('Anular')
                         ->icon('heroicon-o-x-mark')
@@ -395,6 +394,7 @@ class CrmovimientoResource extends Resource implements HasShieldPermissions
                         ->color('danger')
                         ->authorize(fn() => Gate::allows('anular_crmovimiento'))
                         ->requiresConfirmation(),
+                    Tables\Actions\DeleteAction::make(),
                 ]),
             ])
             ->bulkActions([
